@@ -14,8 +14,8 @@ Built for the IndoKerja.id Full Stack Developer technical assessment.
 | Frontend | _to be filled after deployment_       |
 | API      | _to be filled after deployment_       |
 
-The API runs on a free tier that sleeps when idle. The first request after a pause can
-take 30 to 60 seconds; subsequent requests are fast.
+The API is a serverless function, so the first request after an idle period spends a
+couple of seconds starting the container. Everything after that is immediate.
 
 Anyone can browse jobs without an account; logging in is only needed to apply or to
 manage postings.
@@ -48,6 +48,8 @@ You can also register new accounts of either role from the app.
 ```
 .
 ├── backend/               NestJS REST API
+│   ├── api/               Vercel serverless entry point
+│   ├── public/            Landing page shown at the API root
 │   ├── prisma/
 │   │   ├── schema.prisma  Database schema
 │   │   ├── migrations/    Generated SQL migrations
@@ -145,17 +147,26 @@ The app refuses to start when a required variable is missing.
 
 ## Deployment
 
-The app is deployed as three managed services, all on free tiers:
+Everything runs on free tiers: Neon for the database, and two Vercel projects from
+this one repository.
 
-1. **Neon** (PostgreSQL): create a project and copy the connection string.
-2. **Render** (API): web service from the `backend` folder.
-   - Build command: `npm install && npm run build`
-   - Start command: `npm run start:deploy` (runs pending migrations, then starts the API)
-   - Environment: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN=<your Vercel URL>`
-   - Seed once from the Render shell with `npm run prisma:seed`.
-3. **Vercel** (frontend): import the repo with root directory `frontend`.
-   - Environment: `VITE_API_URL=https://<your-render-service>.onrender.com/api`
-   - `vercel.json` rewrites all routes to `index.html` for client-side routing.
+1. **Neon** (PostgreSQL): create a project in the Singapore region and copy the pooled
+   connection string. Region matters: from Indonesia a Singapore database answers in
+   about 20 ms, a US one in about 250 ms.
+2. **Vercel** (API): import the repo with root directory `backend`.
+   - Environment: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN=<your frontend URL>`
+   - `backend/vercel.json` builds with `nest build` and serves `api/` as a serverless
+     function. `api/[...slug].js` forwards every request into the compiled Nest app,
+     which is booted once per warm container.
+3. **Vercel** (frontend): import the repo again, this time with root directory
+   `frontend`.
+   - Environment: `VITE_API_URL=https://<your-api-deployment>/api`
+   - `frontend/vercel.json` rewrites all routes to `index.html` for client-side routing.
+
+Schema changes are applied with `npm run prisma:deploy` and demo data with
+`npm run prisma:seed`, both run locally against the production `DATABASE_URL`. A
+serverless function is not a good place to run migrations, so they stay a deliberate
+step rather than something that happens on every deploy.
 
 ## Design notes
 

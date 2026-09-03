@@ -2,6 +2,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // The second target is the runtime Vercel serverless functions run on.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
