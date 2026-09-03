@@ -1,5 +1,6 @@
 # IndoKerja API
 
+Base URL (production): `https://indokerja-api.vercel.app/api`
 Base URL (local): `http://localhost:3000/api`
 
 All responses are JSON. Timestamps are ISO 8601 strings. IDs are UUIDs.
@@ -241,7 +242,7 @@ Candidates for one of the company's jobs, newest first.
 }
 ```
 
-Errors: `403` when the job belongs to another company.
+Errors: `404` when the job does not exist, `403` when it belongs to another company.
 
 ### `GET /applications/me` (JOB_SEEKER)
 

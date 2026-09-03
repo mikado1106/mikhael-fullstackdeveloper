@@ -58,11 +58,21 @@ async function upsertSeeker(email: string, name: string, passwordHash: string) {
 
 async function ensureJobs(companyId: string, jobs: JobSeed[]) {
   const existing = await prisma.job.count({ where: { companyId } });
-  if (existing > 0) {
-    return prisma.job.findMany({ where: { companyId }, orderBy: { createdAt: 'asc' } });
+  if (existing === 0) {
+    await prisma.job.createMany({ data: jobs.map((job) => ({ ...job, companyId })) });
   }
-  await prisma.job.createMany({ data: jobs.map((job) => ({ ...job, companyId })) });
-  return prisma.job.findMany({ where: { companyId }, orderBy: { createdAt: 'asc' } });
+  const rows = await prisma.job.findMany({ where: { companyId } });
+  // Keyed by title on purpose: createMany stamps every row with the same createdAt,
+  // so ordering by it would leave the demo applications attached to arbitrary jobs.
+  return new Map(rows.map((job) => [job.title, job]));
+}
+
+function jobByTitle(jobs: Map<string, { id: string }>, title: string) {
+  const job = jobs.get(title);
+  if (!job) {
+    throw new Error(`Seed job not found: ${title}`);
+  }
+  return job;
 }
 
 interface ApplicationSeed {
@@ -202,8 +212,9 @@ async function main() {
     },
   ]);
 
-  const [frontendJob, backendJob] = nusantaraJobs;
-  const [flutterJob] = bumiJobs;
+  const frontendJob = jobByTitle(nusantaraJobs, 'Frontend Developer (React)');
+  const backendJob = jobByTitle(nusantaraJobs, 'Backend Engineer (Node.js)');
+  const flutterJob = jobByTitle(bumiJobs, 'Mobile Developer (Flutter)');
 
   await ensureApplication({
     jobId: frontendJob.id,

@@ -26,8 +26,8 @@ All demo accounts use the password `password123`.
 
 | Role       | Email                   | Notes                                   |
 | ---------- | ----------------------- | --------------------------------------- |
-| Company    | `company@indokerja.id`  | PT Nusantara Teknologi, 4 jobs posted   |
-| Company    | `company2@indokerja.id` | Bumi Digital Studio, 3 jobs posted      |
+| Company    | `company@indokerja.id`  | PT Nusantara Teknologi, has candidates to review |
+| Company    | `company2@indokerja.id` | Bumi Digital Studio, a second company    |
 | Job seeker | `seeker@indokerja.id`   | Has 2 applications in progress          |
 | Job seeker | `seeker2@indokerja.id`  | Has 2 applications, one shortlisted     |
 
@@ -186,6 +186,13 @@ Five tables, all with UUID primary keys:
   initial `APPLIED` entry is written together with the application.
 
 The full schema is in [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma).
+
+### Pinned dependencies
+
+`@nestjs/config` and `@nestjs/jwt` are pinned to their last CommonJS releases. The 12.x
+line is ESM-only, which a CommonJS build can only load on Node 22.12 and newer. Pinning
+keeps the app runnable on any supported Node version, including the one the serverless
+platform happens to use. Upgrading them means moving the whole backend to ESM.
 
 ### Security
 
