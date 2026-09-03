@@ -9,10 +9,10 @@ Built for the IndoKerja.id Full Stack Developer technical assessment.
 
 ## Live demo
 
-| Part     | URL                                   |
-| -------- | ------------------------------------- |
-| Frontend | _to be filled after deployment_       |
-| API      | _to be filled after deployment_       |
+| Part     | URL                                                |
+| -------- | -------------------------------------------------- |
+| Frontend | https://mikhael-fullstackdeveloper.vercel.app       |
+| API      | https://indokerja-api.vercel.app/api                |
 
 The API is a serverless function, so the first request after an idle period spends a
 couple of seconds starting the container. Everything after that is immediate.
