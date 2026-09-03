@@ -155,9 +155,9 @@ this one repository.
    about 20 ms, a US one in about 250 ms.
 2. **Vercel** (API): import the repo with root directory `backend`.
    - Environment: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN=<your frontend URL>`
-   - `backend/vercel.json` builds with `nest build` and serves `api/` as a serverless
-     function. `api/[...slug].js` forwards every request into the compiled Nest app,
-     which is booted once per warm container.
+   - `backend/vercel.json` builds with `nest build` and rewrites every `/api/*` request
+     to a single serverless function. `api/index.js` hands the request to the compiled
+     Nest app, which is booted once per warm container rather than once per request.
 3. **Vercel** (frontend): import the repo again, this time with root directory
    `frontend`.
    - Environment: `VITE_API_URL=https://<your-api-deployment>/api`
