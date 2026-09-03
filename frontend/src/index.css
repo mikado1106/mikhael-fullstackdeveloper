@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand-50: #EEF5FB;
+  --color-brand-100: #D9E7F5;
+  --color-brand-200: #B5CFEB;
+  --color-brand-300: #82ADD9;
+  --color-brand-400: #4E88C2;
+  --color-brand-500: #2D6BA8;
+  --color-brand-600: #20568C;
+  --color-brand-700: #1B4671;
+  --color-brand-800: #183858;
+  --color-brand-900: #132B43;
+  --color-surface: #F5F7FA;
+
+  /* `both` keeps staggered items hidden until their delay elapses. */
+  --animate-fade-in: fade-in 200ms ease-out both;
+  --animate-fade-up: fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-down: slide-down 200ms ease-out both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-surface);
+  color: #0F172A;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
