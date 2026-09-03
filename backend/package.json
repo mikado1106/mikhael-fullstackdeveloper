@@ -4,6 +4,9 @@
   "description": "Job application management API for the IndoKerja assessment",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "22.x"
+  },
   "prisma": {
     "seed": "npx ts-node prisma/seed.ts"
   },
