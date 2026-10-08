@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -24,6 +25,7 @@ export class ApplicationsController {
 
   @Patch(':id/status')
   @Roles(Role.COMPANY)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,

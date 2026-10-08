@@ -84,7 +84,9 @@ docker compose up -d
 ```
 
 This starts PostgreSQL 16 on `localhost:5432` with user, password, and database all set
-to `lokerkita`.
+to `lokerkita`. If you ran the pre-rebrand version before, reset the old volume once
+(`docker compose down -v`): Postgres only applies `POSTGRES_*` on first init, so the
+old volume would not have the `lokerkita` role and database.
 
 ### 2. Backend
 
@@ -93,12 +95,14 @@ cd backend
 cp .env.example .env        # Windows CMD: copy .env.example .env
 npm install                 # also runs `prisma generate`
 npm run prisma:deploy       # creates the schema from the committed migration
-npm run prisma:seed         # loads the demo accounts and jobs
+npm run prisma:seed         # loads the demo accounts and jobs (see note below)
 npm run start:dev           # http://localhost:3000/api
 ```
 
 The defaults in `.env.example` already match `docker-compose.yml`, so no editing is
-needed for a local run.
+needed for a local run. Note: if the database was seeded before the rebrand, reset
+it first (`npx prisma migrate reset`) — reseeding otherwise adds a second set of
+demo accounts instead of replacing them.
 
 Quick check: `GET http://localhost:3000/api/health` returns `{"status":"ok"}`.
 
@@ -206,6 +210,17 @@ platform happens to use. Upgrading them means moving the whole backend to ESM.
   rejected (`400`).
 - Database errors such as unique violations are translated into proper HTTP responses
   (`409`) instead of leaking as `500`s.
+- Rate limiting via `@nestjs/throttler`: 100 requests/minute per IP globally,
+  10/min on `register`/`login`, 30/min on application status changes. Honest
+  limitation: the store is in-memory, so on serverless each warm container counts
+  separately — a shared store (e.g. Upstash Redis) is the documented next step if
+  abuse ever becomes real rather than theoretical.
+- `POST /auth/register` returns `409` for a taken email, which confirms the address
+  exists. Deliberate trade-off: there is no mail infrastructure to send an
+  "already registered" notice instead, and a vague error would only confuse
+  legitimate signups.
+- `JWT_SECRET` must be at least 32 characters long when `NODE_ENV=production`;
+  the app refuses to start otherwise.
 
 ### Business rules
 

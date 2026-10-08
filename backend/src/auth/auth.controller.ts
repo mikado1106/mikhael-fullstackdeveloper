@@ -12,8 +12,7 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // Stricter than the global 100/min: brute-forcing credentials or sweeping
-  // registered emails through here is made impractical.
+  // Stricter than the global 100/min for these credential-handling endpoints.
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register')

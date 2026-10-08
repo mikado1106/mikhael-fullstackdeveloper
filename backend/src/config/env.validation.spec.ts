@@ -34,4 +34,10 @@ describe('validateEnv', () => {
     expect(config.JWT_EXPIRES_IN_SECONDS).toBe(86_400);
     expect(config.PORT).toBe(3000);
   });
+
+  it('rejects an unknown NODE_ENV instead of silently skipping prod rules', () => {
+    expect(() => validateEnv({ ...BASE_ENV, NODE_ENV: 'prod' })).toThrow(
+      'NODE_ENV must be one of development, test, production',
+    );
+  });
 });

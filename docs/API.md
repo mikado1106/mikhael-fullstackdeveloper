@@ -326,6 +326,7 @@ Request:
 ```
 
 Response `200`: the updated application detail including the new history entry.
+Rate limited to 30 requests/minute per IP (`429` beyond that).
 
 Rules:
 

@@ -48,13 +48,14 @@ export class ApplicationsService {
   ) {}
 
   async apply(jobId: string, user: AuthenticatedUser, dto: CreateApplicationDto) {
-    // The isActive check and the insert run in one transaction: without it, a
-    // job deactivated between the check and the insert could still be applied to.
     return this.prisma.$transaction(async (tx) => {
-      const job = await tx.job.findUnique({
-        where: { id: jobId },
-        select: { id: true, isActive: true },
-      });
+      // Lock the job row before checking it: on READ COMMITTED a plain SELECT
+      // does not stop a concurrent deactivation from slipping between the check
+      // and the insert below. (No deactivate endpoint exists yet; the lock keeps
+      // the invariant safe for when one is added.)
+      const rows = await tx.$queryRaw<{ id: string; isActive: boolean }[]>`
+        SELECT id, "isActive" FROM "jobs" WHERE id = ${jobId} FOR UPDATE`;
+      const job = rows[0];
       if (!job) {
         throw new NotFoundException('Job not found');
       }
@@ -81,7 +82,8 @@ export class ApplicationsService {
           include: applicationDetailInclude,
         });
       } catch (error) {
-        // The @@unique([jobId, applicantId]) constraint is the real guard.
+        // @@unique([jobId, applicantId]) guards double-apply; the row lock above
+        // guards the isActive invariant. Two different guarantees, both needed.
         if (isPrismaError(error, 'P2002')) {
           throw new ConflictException('You have already applied to this job');
         }

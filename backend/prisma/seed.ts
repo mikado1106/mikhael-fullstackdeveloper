@@ -2,6 +2,10 @@
  * Demo data. Idempotent: users are upserted, jobs and applications are only
  * created when absent.
  *
+ * NOTE: upsert keys on the current emails. If this database was seeded before
+ * the LokerKita rebrand, reset it (e.g. `docker compose down -v` + reseed)
+ * instead — otherwise the old demo accounts stay alongside the new ones.
+ *
  * Accounts (password for all: password123)
  *   company@lokerkita.id   COMPANY     PT Nusantara Teknologi
  *   company2@lokerkita.id  COMPANY     Bumi Digital Studio

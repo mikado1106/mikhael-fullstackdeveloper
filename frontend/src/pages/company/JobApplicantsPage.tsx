@@ -38,7 +38,7 @@ export function JobApplicantsPage() {
         />
       </div>
 
-      {applicants.length === 0 ? (
+      {applicants.length === 0 && meta.total === 0 ? (
         <EmptyState title="No applications yet" description="Candidates will appear here as soon as they apply." />
       ) : (
         <>

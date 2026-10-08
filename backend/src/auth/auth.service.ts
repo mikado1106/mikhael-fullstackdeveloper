@@ -46,10 +46,9 @@ export class AuthService {
 
     const existing = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (existing) {
-      // Deliberate trade-off: the 409 confirms the email is taken (user
-      // enumeration), but the alternative is a confusing signup with no email
-      // infrastructure to send an "already registered" notice. Bulk sweeping is
-      // made impractical by the stricter rate limit on this endpoint.
+      // Deliberate trade-off, documented in README Security: the 409 confirms
+      // the email is taken. No mail infrastructure exists to notify the owner
+      // of the address instead.
       throw new ConflictException('Email is already registered');
     }
 

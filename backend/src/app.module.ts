@@ -16,9 +16,9 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
-    // Default: 100 requests/minute per IP. Auth endpoints set a stricter limit
-    // via @Throttle. In-memory store: on serverless, each warm container tracks
-    // its own counters, so this is per-instance rather than global.
+    // Default 100 req/min per IP, in-memory. On serverless each warm container
+    // keeps its own counters — see README Security for the honest threat model.
+    // Auth endpoints set a stricter limit via @Throttle.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
@@ -28,11 +28,11 @@ import { PrismaModule } from './prisma/prisma.module';
   ],
   controllers: [HealthController],
   providers: [
-    // Guards run in registration order: authenticate first, then authorize,
-    // then rate-limit.
+    // Throttler first: junk requests are dropped before paying JWT validation.
+    // Then authenticate, then authorize.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_FILTER, useClass: PrismaExceptionFilter },
   ],
 })

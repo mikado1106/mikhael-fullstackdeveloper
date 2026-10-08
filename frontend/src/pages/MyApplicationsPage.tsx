@@ -23,7 +23,7 @@ export function MyApplicationsPage() {
       {applicationsQuery.isError ? <Alert>{errorMessage(applicationsQuery.error)}</Alert> : null}
 
       {applicationsQuery.data ? (
-        applicationsQuery.data.data.length === 0 ? (
+        applicationsQuery.data.meta.total === 0 ? (
           <EmptyState
             title="No applications yet"
             description="Browse the openings and send your first application."

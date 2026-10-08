@@ -11,6 +11,8 @@ type RawEnv = Record<string, unknown>;
 
 const REQUIRED_KEYS = ['DATABASE_URL', 'JWT_SECRET'] as const;
 
+const NODE_ENVS = ['development', 'test', 'production'] as const;
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
 }
@@ -18,6 +20,14 @@ function isNonEmptyString(value: unknown): value is string {
 function readString(config: RawEnv, key: string, fallback: string): string {
   const value = config[key];
   return isNonEmptyString(value) ? value : fallback;
+}
+
+function readNodeEnv(config: RawEnv): string {
+  const value = readString(config, 'NODE_ENV', 'development');
+  if (!(NODE_ENVS as readonly string[]).includes(value)) {
+    throw new Error(`NODE_ENV must be one of ${NODE_ENVS.join(', ')}, received ${JSON.stringify(value)}`);
+  }
+  return value;
 }
 
 function readPositiveInt(config: RawEnv, key: string, fallback: number): number {
@@ -38,7 +48,7 @@ export function validateEnv(config: RawEnv): EnvConfig {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
-  const nodeEnv = readString(config, 'NODE_ENV', 'development');
+  const nodeEnv = readNodeEnv(config);
   const jwtSecret = config.JWT_SECRET as string;
   if (nodeEnv === 'production' && jwtSecret.length < 32) {
     throw new Error('JWT_SECRET must be at least 32 characters long when NODE_ENV=production');
