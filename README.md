@@ -1,10 +1,56 @@
 # LokerKita — Job Application Management
 
-A full-stack web app for job seekers and companies. Job seekers browse vacancies and
-apply; companies post vacancies, review candidates, and move them through a hiring
-pipeline. Every status change is recorded in an application history.
+Job seekers browse vacancies, apply, and track every application. Companies post
+vacancies, review candidates, and move them through a hiring pipeline where every
+status change is recorded in an append-only history. Both sides see the same state —
+no spreadsheets, no lost threads, no "sudah dibaca tapi tidak dibalas" limbo.
 
-Built as a portfolio project.
+Built as a portfolio project by Mikhael Edo Sinambela.
+
+## Why this exists
+
+Applying for jobs through portals and chat threads scatters the process: seekers
+lose track of where they applied and what stage each application is at; companies
+juggle candidates across spreadsheets and inbox threads, and nobody can answer
+"what's the latest?" with confidence. LokerKita puts both sides on one shared
+record — the application plus its full status history — so that question always
+has exactly one answer.
+
+## Key technical decisions
+
+- **The database enforces the invariants, not `if` statements.** One application
+  per seeker per job is a unique constraint, so it holds under concurrent
+  requests. Status changes are compare-and-set on the last-read status: if two
+  reviewers act on the same candidate at once, the second gets a `409` instead of
+  silently overwriting the first.
+- **Applying is atomic.** The job row is locked (`SELECT ... FOR UPDATE`) before
+  the active check, and the check plus the insert run in one transaction.
+- **Auth is deny-by-default.** A global JWT guard means a new endpoint cannot be
+  left open by accident; role guards and per-company ownership checks sit on top.
+- **Login doesn't leak timing.** bcrypt always runs exactly once, even for
+  unknown emails.
+- **Trade-offs are documented, not hidden.** Register returns `409` for a taken
+  email — it confirms the address exists, accepted because there is no mail
+  infrastructure for an "already registered" notice. Rate limiting is in-memory
+  per instance, which is weak on serverless; that's written down as a known
+  limitation with a shared store as the next step.
+- **Serverless without divergence.** One `bootstrap.ts` builds the app for both
+  the long-running server and the Vercel function, so the API prefix, CORS, and
+  validation rules cannot drift apart.
+
+## October 2026 revamp
+
+The project started as a technical assessment under a different brand. The revamp:
+
+1. **Full rebrand** to LokerKita: new logo and teal identity, all copy, demo data,
+   and documentation.
+2. **Quality pass**: rate limiting on auth (10/min) and status mutations (30/min),
+   JWT secret strength enforced in production, pagination on every list endpoint,
+   transactional apply with row locking, and unit tests for the new rules. Every
+   change passed an independent QA review before merge.
+3. **On the roadmap**: email notifications on status changes and a company
+   analytics dashboard — both cheap to add on this architecture, neither needs a
+   breaking schema change.
 
 ## Live demo
 
@@ -12,6 +58,9 @@ Built as a portfolio project.
 | -------- | -------------------------------------------------- |
 | Frontend | https://mikhael-fullstackdeveloper.vercel.app       |
 | API      | https://indokerja-api.vercel.app/api                |
+
+> Note: the live deployments still use the previous project names and will be
+> re-deployed under LokerKita.
 
 The API is a serverless function, so the first request after an idle period spends a
 couple of seconds starting the container. Everything after that is immediate.
@@ -84,9 +133,10 @@ docker compose up -d
 ```
 
 This starts PostgreSQL 16 on `localhost:5432` with user, password, and database all set
-to `lokerkita`. If you ran the pre-rebrand version before, reset the old volume once
-(`docker compose down -v`): Postgres only applies `POSTGRES_*` on first init, so the
-old volume would not have the `lokerkita` role and database.
+to `lokerkita`. The volume is named `lokerkita_postgres_data`, so a fresh database is
+initialized on first run — including for anyone who ran the pre-rebrand version (the
+old `postgres_data` volume simply becomes an unused orphan; `docker volume prune`
+reclaims the disk space).
 
 ### 2. Backend
 
@@ -126,7 +176,8 @@ npm test
 ```
 
 Unit tests cover the application status transition rules (final statuses are frozen,
-no-op changes are rejected).
+no-op changes are rejected) and environment validation (required variables, JWT
+secret strength in production, strict `NODE_ENV`).
 
 ## Environment variables
 
