@@ -190,6 +190,9 @@ secret strength in production, strict `NODE_ENV`).
 | `JWT_EXPIRES_IN_SECONDS` | no       | Token lifetime, default `86400` (1 day)            |
 | `PORT`                   | no       | HTTP port, default `3000`                          |
 | `CORS_ORIGIN`            | no       | Allowed origins, comma separated, default `http://localhost:5173` |
+| `RESEND_API_KEY`         | no       | Resend API key for status emails; empty = log driver |
+| `MAIL_FROM`              | no       | Sender address, default `noreply@lokerkita.id`      |
+| `APP_URL`                | no       | Frontend base URL for email links; empty = no link |
 
 The app refuses to start when a required variable is missing.
 

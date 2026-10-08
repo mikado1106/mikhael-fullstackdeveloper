@@ -171,3 +171,23 @@ export interface ApiErrorBody {
   message: string | string[];
   error?: string;
 }
+
+export interface CompanyAnalytics {
+  totals: {
+    jobs: number;
+    activeJobs: number;
+    applications: number;
+  };
+  byStatus: Record<ApplicationStatus, number>;
+  byJob: Array<{
+    jobId: string;
+    title: string;
+    isActive: boolean;
+    applications: number;
+    byStatus: Partial<Record<ApplicationStatus, number>>;
+  }>;
+  applicationsByDay: Array<{
+    date: string;
+    count: number;
+  }>;
+}

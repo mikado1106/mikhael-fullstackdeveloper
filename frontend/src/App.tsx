@@ -5,6 +5,7 @@ import { ApplicationDetailPage } from './pages/ApplicationDetailPage';
 import { CompanyJobsPage } from './pages/company/CompanyJobsPage';
 import { CreateJobPage } from './pages/company/CreateJobPage';
 import { JobApplicantsPage } from './pages/company/JobApplicantsPage';
+import { CompanyAnalyticsPage } from './pages/company/CompanyAnalyticsPage';
 import { HomePage } from './pages/HomePage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import { JobListPage } from './pages/JobListPage';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/company/jobs" element={<CompanyJobsPage />} />
             <Route path="/company/jobs/new" element={<CreateJobPage />} />
             <Route path="/company/jobs/:id/applicants" element={<JobApplicantsPage />} />
+            <Route path="/company/analytics" element={<CompanyAnalyticsPage />} />
           </Route>
         </Route>
       </Route>

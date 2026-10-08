@@ -205,6 +205,35 @@ Response `201`: the created job with its `company`. Errors: `400` when
 
 Jobs posted by the current company, newest first, each with `applicationsCount`.
 
+### `GET /companies/me/analytics` (COMPANY)
+
+Analytics snapshot for the current company's jobs. All counts are scoped to the
+authenticated company only.
+
+Response `200`:
+
+```json
+{
+  "totals": { "jobs": 5, "activeJobs": 3, "applications": 42 },
+  "byStatus": { "APPLIED": 10, "REVIEWING": 8, "SHORTLISTED": 6, "REJECTED": 15, "ACCEPTED": 3 },
+  "byJob": [
+    {
+      "jobId": "abc",
+      "title": "Frontend Dev",
+      "isActive": true,
+      "applications": 20,
+      "byStatus": { "APPLIED": 8, "SHORTLISTED": 6, "REJECTED": 6 }
+    }
+  ],
+  "applicationsByDay": [{ "date": "2026-10-01", "count": 3 }]
+}
+```
+
+- `byStatus` always contains all five statuses (0 when empty).
+- `byJob[].byStatus` only contains statuses with a count above 0.
+- `applicationsByDay` covers the last 30 calendar days (UTC, including today),
+  `YYYY-MM-DD` ascending, only days with at least one application.
+
 ---
 
 ## Applications
@@ -334,5 +363,15 @@ Rules:
 - Changing to the current status returns `400`.
 - Any other move between non-final statuses is allowed, including backwards.
 - If another request changed the status in the meantime, the update returns `409`.
+
+Email notification: after a successful update, a status-change email is sent to
+the applicant. Provider submission is awaited for up to 5 seconds so the
+outcome is known even on serverless runtimes; failures are logged with a
+constant message and never fail the update. Note: awaiting the provider only
+confirms submission acceptance, not inbox delivery. Provider is Resend when
+`RESEND_API_KEY` is set, otherwise a log driver (in production the log driver
+records only a generic event, never the recipient address, subject, or body).
+No email is sent when validation rejects the change. A durable outbox/queue
+would be the next step if at-least-once delivery is required.
 
 Errors: `403` job belongs to another company, `404` application not found.

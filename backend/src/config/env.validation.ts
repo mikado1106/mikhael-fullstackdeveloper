@@ -5,6 +5,9 @@ export interface EnvConfig {
   JWT_EXPIRES_IN_SECONDS: number;
   PORT: number;
   CORS_ORIGIN: string;
+  RESEND_API_KEY: string;
+  MAIL_FROM: string;
+  APP_URL: string;
 }
 
 type RawEnv = Record<string, unknown>;
@@ -22,10 +25,23 @@ function readString(config: RawEnv, key: string, fallback: string): string {
   return isNonEmptyString(value) ? value : fallback;
 }
 
+function readOptionalString(config: RawEnv, key: string, fallback: string): string {
+  const value = config[key];
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== 'string') {
+    throw new Error(`${key} must be a string`);
+  }
+  return value.trim() || fallback;
+}
+
 function readNodeEnv(config: RawEnv): string {
   const value = readString(config, 'NODE_ENV', 'development');
   if (!(NODE_ENVS as readonly string[]).includes(value)) {
-    throw new Error(`NODE_ENV must be one of ${NODE_ENVS.join(', ')}, received ${JSON.stringify(value)}`);
+    throw new Error(
+      `NODE_ENV must be one of ${NODE_ENVS.join(', ')}, received ${JSON.stringify(value)}`,
+    );
   }
   return value;
 }
@@ -40,6 +56,38 @@ function readPositiveInt(config: RawEnv, key: string, fallback: number): number 
     throw new Error(`${key} must be a positive integer, received ${JSON.stringify(value)}`);
   }
   return parsed;
+}
+
+function readMailFrom(config: RawEnv): string {
+  const value = readOptionalString(config, 'MAIL_FROM', 'noreply@lokerkita.id');
+  if (!value.includes('@') || /[\r\n]/.test(value)) {
+    throw new Error('MAIL_FROM must contain @ and must not contain CR/LF characters');
+  }
+  return value;
+}
+
+function readAppUrl(config: RawEnv): string {
+  const value = readOptionalString(config, 'APP_URL', '');
+  if (value === '') {
+    return value;
+  }
+
+  if (!/^https?:\/\//.test(value) || /[\s\\]/.test(value)) {
+    throw new Error('APP_URL must be a valid URL starting with http:// or https://');
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('APP_URL must be a valid URL starting with http:// or https://');
+  }
+
+  if (!url.hostname || url.username || url.password || url.search || url.hash) {
+    throw new Error('APP_URL must not contain credentials, a query string, or a fragment');
+  }
+
+  return url.toString().replace(/\/+$/, '');
 }
 
 export function validateEnv(config: RawEnv): EnvConfig {
@@ -61,5 +109,8 @@ export function validateEnv(config: RawEnv): EnvConfig {
     JWT_EXPIRES_IN_SECONDS: readPositiveInt(config, 'JWT_EXPIRES_IN_SECONDS', 86_400),
     PORT: readPositiveInt(config, 'PORT', 3000),
     CORS_ORIGIN: readString(config, 'CORS_ORIGIN', 'http://localhost:5173'),
+    RESEND_API_KEY: readOptionalString(config, 'RESEND_API_KEY', ''),
+    MAIL_FROM: readMailFrom(config),
+    APP_URL: readAppUrl(config),
   };
 }

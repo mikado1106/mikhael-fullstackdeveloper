@@ -8,6 +8,7 @@ const guestLinks = [{ to: '/jobs', label: 'Jobs' }];
 
 const companyLinks = [
   { to: '/company/jobs', label: 'My jobs' },
+  { to: '/company/analytics', label: 'Analytics' },
   { to: '/company/jobs/new', label: 'Post a job' },
   { to: '/jobs', label: 'Browse jobs' },
 ];

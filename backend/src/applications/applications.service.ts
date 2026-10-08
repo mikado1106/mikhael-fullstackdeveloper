@@ -3,12 +3,14 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ApplicationStatus, Prisma, Role } from '@prisma/client';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CompaniesService } from '../companies/companies.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertStatusTransition } from './application-status.rules';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -42,9 +44,12 @@ const applicationDetailInclude = {
 
 @Injectable()
 export class ApplicationsService {
+  private readonly logger = new Logger(ApplicationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly companiesService: CompaniesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async apply(jobId: string, user: AuthenticatedUser, dto: CreateApplicationDto) {
@@ -175,10 +180,15 @@ export class ApplicationsService {
     await this.assertOwnsJob(application.job.companyId, user);
     assertStatusTransition(application.status, dto.status);
 
+    const prevStatus = application.status;
+    let updated: Prisma.ApplicationGetPayload<{
+      include: typeof applicationDetailInclude;
+    }>;
+
     try {
       // Compare-and-set on the status we read: a concurrent change makes Prisma
       // throw P2025, which we turn into a 409 instead of silently overwriting.
-      return await this.prisma.application.update({
+      updated = await this.prisma.application.update({
         where: { id, status: application.status },
         data: {
           status: dto.status,
@@ -201,6 +211,39 @@ export class ApplicationsService {
       }
       throw error;
     }
+
+    // Best-effort notification: awaited (not fire-and-forget) so the delivery
+    // outcome is known even on serverless runtimes that may freeze after the
+    // response. Bounded by a 5s timeout; failures are logged and never fail
+    // the status update. A durable outbox/queue would be the next step if
+    // at-least-once delivery is required.
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        this.notificationsService.sendStatusChangedEmail({
+          to: updated.applicant.email,
+          applicantName: updated.applicant.name,
+          jobTitle: updated.job.title,
+          companyName: updated.job.company.name,
+          oldStatus: prevStatus,
+          newStatus: dto.status,
+          note: dto.note,
+          applicationId: updated.id,
+        }),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error('EmailSendTimeout')), 5000);
+        }),
+      ]);
+    } catch {
+      // Deliberately constant message: provider error objects may carry PII.
+      this.logger.error('Status change email failed or timed out');
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+
+    return updated;
   }
 
   private async assertOwnsJob(jobCompanyId: string, user: AuthenticatedUser): Promise<void> {
