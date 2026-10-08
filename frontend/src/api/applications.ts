@@ -3,6 +3,7 @@ import type {
   ApplicationDetail,
   JobApplicantsResponse,
   MyApplication,
+  Paginated,
   UpdateStatusRequest,
 } from '../types/api';
 
@@ -13,16 +14,16 @@ export function applyToJob(jobId: string, coverLetter?: string): Promise<Applica
   });
 }
 
-export function listMyApplications(): Promise<MyApplication[]> {
-  return apiRequest<MyApplication[]>('/applications/me');
+export function listMyApplications(page = 1): Promise<Paginated<MyApplication>> {
+  return apiRequest<Paginated<MyApplication>>('/applications/me', { query: { page } });
 }
 
 export function getApplication(id: string): Promise<ApplicationDetail> {
   return apiRequest<ApplicationDetail>(`/applications/${id}`);
 }
 
-export function listJobApplicants(jobId: string): Promise<JobApplicantsResponse> {
-  return apiRequest<JobApplicantsResponse>(`/jobs/${jobId}/applications`);
+export function listJobApplicants(jobId: string, page = 1): Promise<JobApplicantsResponse> {
+  return apiRequest<JobApplicantsResponse>(`/jobs/${jobId}/applications`, { query: { page } });
 }
 
 export function updateApplicationStatus(id: string, dto: UpdateStatusRequest): Promise<ApplicationDetail> {

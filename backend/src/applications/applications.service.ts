@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ApplicationStatus, Prisma, Role } from '@prisma/client';
 import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CompaniesService } from '../companies/companies.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertStatusTransition } from './application-status.rules';
@@ -47,53 +48,70 @@ export class ApplicationsService {
   ) {}
 
   async apply(jobId: string, user: AuthenticatedUser, dto: CreateApplicationDto) {
-    const job = await this.prisma.job.findUnique({
-      where: { id: jobId },
-      select: { id: true, isActive: true },
-    });
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-    if (!job.isActive) {
-      throw new BadRequestException('This job is no longer accepting applications');
-    }
+    // The isActive check and the insert run in one transaction: without it, a
+    // job deactivated between the check and the insert could still be applied to.
+    return this.prisma.$transaction(async (tx) => {
+      const job = await tx.job.findUnique({
+        where: { id: jobId },
+        select: { id: true, isActive: true },
+      });
+      if (!job) {
+        throw new NotFoundException('Job not found');
+      }
+      if (!job.isActive) {
+        throw new BadRequestException('This job is no longer accepting applications');
+      }
 
-    try {
-      return await this.prisma.application.create({
-        data: {
-          jobId,
-          applicantId: user.id,
-          coverLetter: dto.coverLetter,
-          status: ApplicationStatus.APPLIED,
-          history: {
-            create: {
-              fromStatus: null,
-              toStatus: ApplicationStatus.APPLIED,
-              changedById: user.id,
-              note: 'Application submitted',
+      try {
+        return await tx.application.create({
+          data: {
+            jobId,
+            applicantId: user.id,
+            coverLetter: dto.coverLetter,
+            status: ApplicationStatus.APPLIED,
+            history: {
+              create: {
+                fromStatus: null,
+                toStatus: ApplicationStatus.APPLIED,
+                changedById: user.id,
+                note: 'Application submitted',
+              },
             },
           },
-        },
-        include: applicationDetailInclude,
-      });
-    } catch (error) {
-      // The @@unique([jobId, applicantId]) constraint is the real guard.
-      if (isPrismaError(error, 'P2002')) {
-        throw new ConflictException('You have already applied to this job');
+          include: applicationDetailInclude,
+        });
+      } catch (error) {
+        // The @@unique([jobId, applicantId]) constraint is the real guard.
+        if (isPrismaError(error, 'P2002')) {
+          throw new ConflictException('You have already applied to this job');
+        }
+        throw error;
       }
-      throw error;
-    }
-  }
-
-  findMine(user: AuthenticatedUser) {
-    return this.prisma.application.findMany({
-      where: { applicantId: user.id },
-      include: { job: { select: jobSummarySelect } },
-      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findForJob(jobId: string, user: AuthenticatedUser) {
+  async findMine(user: AuthenticatedUser, query: PaginationQueryDto) {
+    const { page, limit } = query;
+    const where = { applicantId: user.id };
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.application.count({ where }),
+      this.prisma.application.findMany({
+        where,
+        include: { job: { select: jobSummarySelect } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
+  }
+
+  async findForJob(jobId: string, user: AuthenticatedUser, query: PaginationQueryDto) {
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
       select: { id: true, title: true, companyId: true },
@@ -103,13 +121,25 @@ export class ApplicationsService {
     }
     await this.assertOwnsJob(job.companyId, user);
 
-    const data = await this.prisma.application.findMany({
-      where: { jobId },
-      include: { applicant: { select: applicantSelect } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { page, limit } = query;
+    const where = { jobId };
 
-    return { job: { id: job.id, title: job.title }, data };
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.application.count({ where }),
+      this.prisma.application.findMany({
+        where,
+        include: { applicant: { select: applicantSelect } },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      job: { id: job.id, title: job.title },
+      data,
+      meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   async findOne(id: string, user: AuthenticatedUser) {

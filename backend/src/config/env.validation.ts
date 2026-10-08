@@ -1,4 +1,5 @@
 export interface EnvConfig {
+  NODE_ENV: string;
   DATABASE_URL: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN_SECONDS: number;
@@ -37,9 +38,16 @@ export function validateEnv(config: RawEnv): EnvConfig {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  const nodeEnv = readString(config, 'NODE_ENV', 'development');
+  const jwtSecret = config.JWT_SECRET as string;
+  if (nodeEnv === 'production' && jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters long when NODE_ENV=production');
+  }
+
   return {
+    NODE_ENV: nodeEnv,
     DATABASE_URL: config.DATABASE_URL as string,
-    JWT_SECRET: config.JWT_SECRET as string,
+    JWT_SECRET: jwtSecret,
     JWT_EXPIRES_IN_SECONDS: readPositiveInt(config, 'JWT_EXPIRES_IN_SECONDS', 86_400),
     PORT: readPositiveInt(config, 'PORT', 3000),
     CORS_ORIGIN: readString(config, 'CORS_ORIGIN', 'http://localhost:5173'),

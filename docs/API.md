@@ -101,7 +101,8 @@ Response `201`:
 }
 ```
 
-Errors: `409` email already registered.
+Errors: `409` email already registered, `429` when the rate limit (10 requests/minute
+per IP on auth endpoints) is exceeded.
 
 ### `POST /auth/login` (public)
 
@@ -111,7 +112,8 @@ Request:
 { "email": "company@indokerja.id", "password": "password123" }
 ```
 
-Response `200`: same shape as register. Errors: `401` invalid email or password.
+Response `200`: same shape as register. Errors: `401` invalid email or password, `429`
+when the rate limit (10 requests/minute per IP on auth endpoints) is exceeded.
 
 ### `GET /auth/me`
 
@@ -222,7 +224,8 @@ Errors: `404` job not found, `400` job no longer active, `409` already applied.
 
 ### `GET /jobs/:jobId/applications` (COMPANY, owner only)
 
-Candidates for one of the company's jobs, newest first.
+Candidates for one of the company's jobs, newest first. Paginated with `page` and
+`limit` query parameters (same defaults as `GET /jobs`).
 
 ```json
 {
@@ -238,7 +241,8 @@ Candidates for one of the company's jobs, newest first.
       "updatedAt": "...",
       "applicant": { "id": "...", "name": "Sari Lestari", "email": "seeker2@indokerja.id" }
     }
-  ]
+  ],
+  "meta": { "page": 1, "limit": 10, "total": 42, "totalPages": 5 }
 }
 ```
 
@@ -246,30 +250,34 @@ Errors: `404` when the job does not exist, `403` when it belongs to another comp
 
 ### `GET /applications/me` (JOB_SEEKER)
 
-The current seeker's applications, newest first, each with a `job` summary:
+The current seeker's applications, newest first, each with a `job` summary. Paginated
+with `page` and `limit` query parameters (same defaults as `GET /jobs`).
 
 ```json
-[
-  {
-    "id": "...",
-    "jobId": "...",
-    "applicantId": "...",
-    "status": "REVIEWING",
-    "coverLetter": "...",
-    "createdAt": "...",
-    "updatedAt": "...",
-    "job": {
+{
+  "data": [
+    {
       "id": "...",
-      "title": "...",
-      "location": "...",
-      "jobType": "FULL_TIME",
-      "salaryMin": 8000000,
-      "salaryMax": 12000000,
-      "companyId": "...",
-      "company": { "id": "...", "name": "..." }
+      "jobId": "...",
+      "applicantId": "...",
+      "status": "REVIEWING",
+      "coverLetter": "...",
+      "createdAt": "...",
+      "updatedAt": "...",
+      "job": {
+        "id": "...",
+        "title": "...",
+        "location": "...",
+        "jobType": "FULL_TIME",
+        "salaryMin": 8000000,
+        "salaryMax": 12000000,
+        "companyId": "...",
+        "company": { "id": "...", "name": "..." }
+      }
     }
-  }
-]
+  ],
+  "meta": { "page": 1, "limit": 10, "total": 7, "totalPages": 1 }
+}
 ```
 
 ### `GET /applications/:id`

@@ -1,16 +1,19 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { listJobApplicants } from '../../api/applications';
 import { StatusBadge } from '../../components/badges';
 import { Alert, Card, EmptyState, PageHeader, Spinner } from '../../components/ui';
+import { Pagination } from '../../components/Pagination';
 import { errorMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 
 export function JobApplicantsPage() {
   const { id = '' } = useParams();
+  const [page, setPage] = useState(1);
   const applicantsQuery = useQuery({
-    queryKey: ['job-applicants', id],
-    queryFn: () => listJobApplicants(id),
+    queryKey: ['job-applicants', id, page],
+    queryFn: () => listJobApplicants(id, page),
     enabled: id !== '',
   });
 
@@ -21,7 +24,7 @@ export function JobApplicantsPage() {
     return <Alert>{errorMessage(applicantsQuery.error)}</Alert>;
   }
 
-  const { job, data: applicants } = applicantsQuery.data;
+  const { job, data: applicants, meta } = applicantsQuery.data;
 
   return (
     <div>
@@ -31,14 +34,15 @@ export function JobApplicantsPage() {
       <div className="mt-4">
         <PageHeader
           title={`Applicants for ${job.title}`}
-          description={`${applicants.length} ${applicants.length === 1 ? 'candidate' : 'candidates'} so far.`}
+          description={`${meta.total} ${meta.total === 1 ? 'candidate' : 'candidates'} so far.`}
         />
       </div>
 
       {applicants.length === 0 ? (
         <EmptyState title="No applications yet" description="Candidates will appear here as soon as they apply." />
       ) : (
-        <Card className="overflow-x-auto p-0">
+        <>
+          <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
@@ -78,7 +82,9 @@ export function JobApplicantsPage() {
               ))}
             </tbody>
           </table>
-        </Card>
+          </Card>
+          <Pagination meta={meta} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

@@ -158,6 +158,7 @@ export interface ApplicationDetail extends ApplicationBase {
 export interface JobApplicantsResponse {
   job: { id: string; title: string };
   data: JobApplicant[];
+  meta: PaginationMeta;
 }
 
 export interface UpdateStatusRequest {
