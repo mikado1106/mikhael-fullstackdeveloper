@@ -1,18 +1,18 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: indokerja-postgres
+    container_name: lokerkita-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: indokerja
-      POSTGRES_PASSWORD: indokerja
-      POSTGRES_DB: indokerja
+      POSTGRES_USER: lokerkita
+      POSTGRES_PASSWORD: lokerkita
+      POSTGRES_DB: lokerkita
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U indokerja -d indokerja"]
+      test: ["CMD-SHELL", "pg_isready -U lokerkita -d lokerkita"]
       interval: 5s
       timeout: 3s
       retries: 10

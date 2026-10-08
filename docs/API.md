@@ -1,4 +1,4 @@
-# IndoKerja API
+# LokerKita API
 
 Base URL (production): `https://indokerja-api.vercel.app/api`
 Base URL (local): `http://localhost:3000/api`
@@ -109,7 +109,7 @@ per IP on auth endpoints) is exceeded.
 Request:
 
 ```json
-{ "email": "company@indokerja.id", "password": "password123" }
+{ "email": "company@lokerkita.id", "password": "password123" }
 ```
 
 Response `200`: same shape as register. Errors: `401` invalid email or password, `429`
@@ -239,7 +239,7 @@ Candidates for one of the company's jobs, newest first. Paginated with `page` an
       "coverLetter": "...",
       "createdAt": "...",
       "updatedAt": "...",
-      "applicant": { "id": "...", "name": "Sari Lestari", "email": "seeker2@indokerja.id" }
+      "applicant": { "id": "...", "name": "Sari Lestari", "email": "seeker2@lokerkita.id" }
     }
   ],
   "meta": { "page": 1, "limit": 10, "total": 42, "totalPages": 5 }

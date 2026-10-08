@@ -3,10 +3,10 @@
  * created when absent.
  *
  * Accounts (password for all: password123)
- *   company@indokerja.id   COMPANY     PT Nusantara Teknologi
- *   company2@indokerja.id  COMPANY     Bumi Digital Studio
- *   seeker@indokerja.id    JOB_SEEKER  Andi Pratama
- *   seeker2@indokerja.id   JOB_SEEKER  Sari Lestari
+ *   company@lokerkita.id   COMPANY     PT Nusantara Teknologi
+ *   company2@lokerkita.id  COMPANY     Bumi Digital Studio
+ *   seeker@lokerkita.id    JOB_SEEKER  Andi Pratama
+ *   seeker2@lokerkita.id   JOB_SEEKER  Sari Lestari
  */
 import { ApplicationStatus, JobType, PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -117,7 +117,7 @@ async function main() {
 
   const nusantara = await upsertCompanyUser(
     {
-      email: 'company@indokerja.id',
+      email: 'company@lokerkita.id',
       name: 'Rina Wijaya',
       companyName: 'PT Nusantara Teknologi',
       location: 'Jakarta',
@@ -128,7 +128,7 @@ async function main() {
   );
   const bumi = await upsertCompanyUser(
     {
-      email: 'company2@indokerja.id',
+      email: 'company2@lokerkita.id',
       name: 'Budi Santoso',
       companyName: 'Bumi Digital Studio',
       location: 'Bandung',
@@ -136,8 +136,8 @@ async function main() {
     },
     passwordHash,
   );
-  const andi = await upsertSeeker('seeker@indokerja.id', 'Andi Pratama', passwordHash);
-  const sari = await upsertSeeker('seeker2@indokerja.id', 'Sari Lestari', passwordHash);
+  const andi = await upsertSeeker('seeker@lokerkita.id', 'Andi Pratama', passwordHash);
+  const sari = await upsertSeeker('seeker2@lokerkita.id', 'Sari Lestari', passwordHash);
 
   if (!nusantara.company || !bumi.company) {
     throw new Error('Company profiles were not created');

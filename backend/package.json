@@ -1,7 +1,7 @@
 {
-  "name": "indokerja-api",
+  "name": "lokerkita-api",
   "version": "0.0.1",
-  "description": "Job application management API for the IndoKerja assessment",
+  "description": "Job application management API for LokerKita",
   "private": true,
   "license": "UNLICENSED",
   "engines": {

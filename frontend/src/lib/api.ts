@@ -1,10 +1,10 @@
 import type { ApiErrorBody, AuthResponse } from '../types/api';
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
-const STORAGE_KEY = 'indokerja.auth';
+const STORAGE_KEY = 'lokerkita.auth';
 
 /** Fired when the API rejects our token so the auth context can log the user out. */
-export const UNAUTHORIZED_EVENT = 'indokerja:unauthorized';
+export const UNAUTHORIZED_EVENT = 'lokerkita:unauthorized';
 
 export class ApiError extends Error {
   readonly status: number;

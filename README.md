@@ -1,11 +1,10 @@
-# IndoKerja Job Application Management
+# LokerKita — Job Application Management
 
-A small full-stack web app that simulates the job application flow on IndoKerja.id.
-Job seekers browse vacancies and apply; companies post vacancies, review candidates,
-and move them through a hiring pipeline. Every status change is recorded in an
-application history.
+A full-stack web app for job seekers and companies. Job seekers browse vacancies and
+apply; companies post vacancies, review candidates, and move them through a hiring
+pipeline. Every status change is recorded in an application history.
 
-Built for the IndoKerja.id Full Stack Developer technical assessment.
+Built as a portfolio project.
 
 ## Live demo
 
@@ -26,10 +25,10 @@ All demo accounts use the password `password123`.
 
 | Role       | Email                   | Notes                                   |
 | ---------- | ----------------------- | --------------------------------------- |
-| Company    | `company@indokerja.id`  | PT Nusantara Teknologi, has candidates to review |
-| Company    | `company2@indokerja.id` | Bumi Digital Studio, a second company    |
-| Job seeker | `seeker@indokerja.id`   | Has 2 applications in progress          |
-| Job seeker | `seeker2@indokerja.id`  | Has 2 applications, one shortlisted     |
+| Company    | `company@lokerkita.id`  | PT Nusantara Teknologi, has candidates to review |
+| Company    | `company2@lokerkita.id` | Bumi Digital Studio, a second company    |
+| Job seeker | `seeker@lokerkita.id`   | Has 2 applications in progress          |
+| Job seeker | `seeker2@lokerkita.id`  | Has 2 applications, one shortlisted     |
 
 You can also register new accounts of either role from the app.
 
@@ -85,7 +84,7 @@ docker compose up -d
 ```
 
 This starts PostgreSQL 16 on `localhost:5432` with user, password, and database all set
-to `indokerja`.
+to `lokerkita`.
 
 ### 2. Backend
 

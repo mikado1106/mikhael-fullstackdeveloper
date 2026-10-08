@@ -18,13 +18,14 @@ export function BrandMark({ size = 'md' }: { size?: 'md' | 'lg' }) {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <rect x="3" y="7" width="18" height="13" rx="2" />
-          <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          <path d="M3 12h18" />
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <path d="M14 3v5h5" />
+          <path d="M9 13h6" />
+          <path d="M9 17h4" />
         </svg>
       </span>
       <span className={`font-bold tracking-tight text-slate-900 ${textSize[size]}`}>
-        Indo<span className="text-brand-600">Kerja</span>
+        Loker<span className="text-brand-600">Kita</span>
       </span>
     </span>
   );

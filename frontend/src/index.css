@@ -2,16 +2,16 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-brand-50: #EEF5FB;
-  --color-brand-100: #D9E7F5;
-  --color-brand-200: #B5CFEB;
-  --color-brand-300: #82ADD9;
-  --color-brand-400: #4E88C2;
-  --color-brand-500: #2D6BA8;
-  --color-brand-600: #20568C;
-  --color-brand-700: #1B4671;
-  --color-brand-800: #183858;
-  --color-brand-900: #132B43;
+  --color-brand-50: #effaf7;
+  --color-brand-100: #d7f0e9;
+  --color-brand-200: #b0e1d3;
+  --color-brand-300: #7dccb8;
+  --color-brand-400: #45b298;
+  --color-brand-500: #26967e;
+  --color-brand-600: #177a66;
+  --color-brand-700: #146152;
+  --color-brand-800: #124f44;
+  --color-brand-900: #0f4038;
   --color-surface: #F5F7FA;
 
   /* `both` keeps staggered items hidden until their delay elapses. */
