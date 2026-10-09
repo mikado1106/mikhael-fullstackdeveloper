@@ -7,17 +7,21 @@ import type { JobListItem } from '../types/api';
 
 export function JobCard({ job, index }: { job: JobListItem; index?: number }) {
   return (
-    <div className="relative">
-      <Link
-        to={`/jobs/${job.id}`}
-        className="block animate-fade-up rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-        style={index === undefined ? undefined : { animationDelay: `${Math.min(index, 5) * 45}ms` }}
-      >
-        <Card className="flex h-full flex-col gap-3 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
-          <div className="pr-10">
-            <h2 className="text-base font-semibold text-slate-900">{job.title}</h2>
-            <p className="text-sm text-slate-600">{job.company.name}</p>
+    <Link
+      to={`/jobs/${job.id}`}
+      className="block animate-fade-up rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+      style={index === undefined ? undefined : { animationDelay: `${Math.min(index, 5) * 45}ms` }}
+    >
+      <Card className="flex h-full flex-col gap-3 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="break-words text-base font-semibold text-slate-900">{job.title}</h2>
+            <p className="break-words text-sm text-slate-600">{job.company.name}</p>
           </div>
+          <div className="shrink-0" onClick={(e) => e.preventDefault()}>
+            <BookmarkButton jobId={job.id} iconOnly />
+          </div>
+        </div>
           <dl className="grid gap-1 text-sm text-slate-600">
             <div className="flex justify-between gap-2">
               <dt className="text-slate-400">Location</dt>
@@ -34,10 +38,6 @@ export function JobCard({ job, index }: { job: JobListItem; index?: number }) {
           </div>
         </Card>
       </Link>
-      <div className="absolute right-3 top-3">
-        <BookmarkButton jobId={job.id} />
-      </div>
-    </div>
   );
 }
 

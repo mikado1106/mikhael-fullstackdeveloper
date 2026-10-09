@@ -15,7 +15,9 @@ const companyLinks = [
 
 const seekerLinks = [
   { to: '/jobs', label: 'Jobs' },
+  { to: '/saved', label: 'Saved' },
   { to: '/applications', label: 'My applications' },
+  { to: '/cv', label: 'My CV' },
 ];
 
 export function Layout() {

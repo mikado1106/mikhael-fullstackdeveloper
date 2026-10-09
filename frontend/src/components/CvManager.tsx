@@ -74,15 +74,30 @@ export function CvManager() {
           <Button type="button" variant="secondary" className="mt-3" onClick={() => void download()}>Unduh CV</Button>
         </div>
       ) : cvQuery.data ? <p className="text-sm text-slate-600">Belum ada CV aktif.</p> : null}
-      <input
-        ref={fileInput}
-        type="file"
-        accept="application/pdf,.pdf"
-        className="block max-w-full text-sm"
-        aria-label="Pilih file CV PDF"
-        disabled={busy}
-        onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }}
-      />
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-slate-600">Format: PDF, maksimal 5 MB.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="sr-only"
+            id="cv-file-input"
+            aria-label="Pilih file CV PDF"
+            disabled={busy}
+            onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            {cvQuery.data?.cv ? 'Ganti CV' : 'Pilih file PDF'}
+          </Button>
+          <span className="text-xs text-slate-500">PDF hingga 5 MB</span>
+        </div>
+      </div>
       {busy ? (
         <div>
           <p className="text-sm" aria-live="polite">{status}</p>

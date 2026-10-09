@@ -28,7 +28,15 @@ export function SavedJobsPage() {
         </div>
       ) : null}
       {query.data ? query.data.data.length === 0 ? (
-        <EmptyState title="Belum ada lowongan tersimpan" description="Simpan lowongan untuk melihatnya di sini." />
+        <EmptyState
+          title="Belum ada lowongan tersimpan"
+          description="Simpan lowongan untuk melihatnya di sini."
+          action={
+            <Link to="/jobs">
+              <Button>Jelajahi lowongan</Button>
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className="flex min-w-0 flex-col gap-3">

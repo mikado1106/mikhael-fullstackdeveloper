@@ -4,7 +4,7 @@ import { lookupSavedJobs, saveJob, unsaveJob } from '../api/savedJobs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from './ui';
 
-export function BookmarkButton({ jobId }: { jobId: string }) {
+export function BookmarkButton({ jobId, iconOnly = false }: { jobId: string; iconOnly?: boolean }) {
   const { user } = useAuth();
   const client = useQueryClient();
   const savedQuery = useQuery({
@@ -55,11 +55,12 @@ export function BookmarkButton({ jobId }: { jobId: string }) {
       aria-label={saved ? 'Hapus lowongan dari simpanan' : 'Simpan lowongan'}
       disabled={mutation.isPending || savedQuery.isPending}
       onClick={() => mutation.mutate(!saved)}
+      className={iconOnly ? 'px-2' : undefined}
     >
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="mr-2 h-4 w-4" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className={iconOnly ? 'h-4 w-4' : 'mr-2 h-4 w-4'} fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
         <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.75L6 21z" />
       </svg>
-      {mutation.isPending ? 'Menyimpan...' : saved ? 'Tersimpan' : 'Simpan'}
+      {iconOnly ? null : (mutation.isPending ? 'Menyimpan...' : saved ? 'Tersimpan' : 'Simpan')}
       {mutation.isError ? <span className="sr-only"> Gagal. Coba lagi.</span> : null}
     </Button>
   );
