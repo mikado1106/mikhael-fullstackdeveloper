@@ -6,6 +6,7 @@ describe('CvService', () => {
 
   function makeTx(overrides: Record<string, any> = {}) {
     return {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: docId }]),
       cvDocument: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockImplementation(({ data }: any) => Promise.resolve({
@@ -14,6 +15,7 @@ describe('CvService', () => {
           activeMimeType: null, activatedAt: null,
         })),
         update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(data)),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       cvUploadAttempt: {
         count: jest.fn().mockResolvedValue(0),
@@ -38,6 +40,10 @@ describe('CvService', () => {
     const prisma: any = {
       $transaction: jest.fn().mockImplementation((fn: any) => fn(tx)),
       cvDocument: { findUnique: jest.fn().mockResolvedValue(docRow) },
+      cvUploadAttempt: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'attempt-1' }),
+        update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve(data)),
+      },
       application: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     const storage: any = {
@@ -143,7 +149,9 @@ describe('CvService', () => {
             findUnique: jest.fn().mockResolvedValue(docRow),
             create: jest.fn(),
             update: jest.fn().mockImplementation(({ data }: any) => Promise.resolve({ ...docRow, ...data })),
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
           },
+          storageCleanupTask: { upsert: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
           cvUploadAttempt: {
             count: jest.fn().mockResolvedValue(0),
             findFirst: jest.fn().mockResolvedValue(attemptRow()),
@@ -156,8 +164,9 @@ describe('CvService', () => {
       const result = await service.finalize(userId, 'attempt-1');
       expect(result.status).toBe('FINALIZED');
       expect(result.isActive).toBe(true);
-      expect(tx.cvDocument.update).toHaveBeenCalledWith(
+      expect(tx.cvDocument.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({ activeGeneration: { lt: BigInt(1) } }),
           data: expect.objectContaining({ activeGeneration: BigInt(1) }),
         }),
       );

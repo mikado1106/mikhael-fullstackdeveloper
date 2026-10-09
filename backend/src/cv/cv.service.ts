@@ -155,107 +155,119 @@ export class CvService {
     const doc = await this.prisma.cvDocument.findUnique({ where: { userId } });
     if (!doc) throw this.notFound('UPLOAD_ATTEMPT_NOT_FOUND');
 
+    const attemptMeta = await this.prisma.cvUploadAttempt.findFirst({
+      where: { id: attemptId, documentId: doc.id },
+      select: { id: true },
+    });
+    if (!attemptMeta) throw this.notFound('UPLOAD_ATTEMPT_NOT_FOUND');
+
     const leaseToken = randomUUID();
     const now = new Date();
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Lock document row for consistent generation check.
-      const locked = await tx.cvDocument.findUnique({ where: { id: doc.id } });
-      if (!locked) throw this.notFound('UPLOAD_ATTEMPT_NOT_FOUND');
+    // Phase 1: acquire lease + validate state (short tx, real row lock).
+    const phase1 = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "cv_documents" WHERE "id" = ${doc.id} FOR UPDATE`;
 
       const attempt = await tx.cvUploadAttempt.findFirst({
         where: { id: attemptId, documentId: doc.id },
       });
       if (!attempt) throw this.notFound('UPLOAD_ATTEMPT_NOT_FOUND');
 
-      // Idempotent retry of an already-finalized attempt.
+      const locked = await tx.cvDocument.findUnique({ where: { id: doc.id } });
+      const activeGen = locked?.activeGeneration ?? BigInt(0);
+
       if (attempt.status === 'FINALIZED') {
-        const current = await tx.cvDocument.findUnique({ where: { id: doc.id } });
-        const isActive = current?.activeGeneration === attempt.generation;
-        return { already: true, isActive, attempt };
+        return { already: true as const, isActive: locked?.activeGeneration === attempt.generation, attempt };
       }
-
-      if (attempt.status === 'SUPERSEDED' || attempt.generation <= locked.activeGeneration) {
-        await tx.cvUploadAttempt.update({
-          where: { id: attempt.id },
-          data: { status: 'SUPERSEDED' },
-        });
-        throw this.apiError(409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active');
+      if (attempt.status === 'SUPERSEDED' || attempt.generation <= activeGen) {
+        return { terminal: 'SUPERSEDED' as const, attempt };
       }
-
       if (attempt.status === 'EXPIRED' || attempt.expiresAt.getTime() <= now.getTime()) {
-        await tx.cvUploadAttempt.update({
-          where: { id: attempt.id },
-          data: { status: 'EXPIRED' },
-        });
-        throw this.apiError(410, 'UPLOAD_ATTEMPT_EXPIRED', 'The upload attempt has expired');
+        return { terminal: 'EXPIRED' as const, attempt };
       }
-
       if (attempt.status === 'FAILED') {
-        throw this.apiError(422, 'CV_VALIDATION_FAILED', 'The uploaded file is not a valid PDF');
+        return { terminal: 'FAILED' as const, attempt };
       }
-
-      // Acquire finalize lease.
       if (attempt.leaseUntil && attempt.leaseUntil.getTime() > now.getTime()) {
         throw this.apiError(409, 'FINALIZATION_IN_PROGRESS', 'CV finalization is already in progress');
       }
+
       await tx.cvUploadAttempt.update({
         where: { id: attempt.id },
-        data: {
-          status: 'VERIFYING',
-          leaseToken,
-          leaseUntil: new Date(now.getTime() + FINALIZE_LEASE_MS),
-        },
+        data: { status: 'VERIFYING', leaseToken, leaseUntil: new Date(now.getTime() + FINALIZE_LEASE_MS) },
       });
+      return { already: false as const, attempt };
+    });
 
-      // Verify object in storage (outside long DB transaction in real impl;
-      // here kept simple: storage calls are quick).
-      let inspection: ObjectInspection;
-      try {
-        inspection = await this.storage.inspect(attempt.temporaryObjectPath);
-      } catch (error) {
-        if (error instanceof StorageObjectMissingError) {
-          await tx.cvUploadAttempt.update({
-            where: { id: attempt.id },
-            data: { status: 'PENDING', leaseToken: null, leaseUntil: null },
-          });
-          throw this.apiError(409, 'UPLOAD_NOT_READY', 'Upload the file before finalizing');
-        }
-        throw error;
-      }
+    if (phase1.already) {
+      const current = await this.prisma.cvDocument.findUnique({ where: { id: doc.id } });
+      return {
+        attemptId: phase1.attempt.id, status: 'FINALIZED',
+        isActive: phase1.isActive ?? false,
+        cv: this.publicCvFromDocument(current!),
+      };
+    }
+    if ('terminal' in phase1 && phase1.terminal) {
+      // Commit terminal status OUTSIDE the tx so it is not rolled back.
+      await this.prisma.cvUploadAttempt.update({
+        where: { id: phase1.attempt.id },
+        data: { status: phase1.terminal },
+      });
+      const map = {
+        SUPERSEDED: [409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active'],
+        EXPIRED: [410, 'UPLOAD_ATTEMPT_EXPIRED', 'The upload attempt has expired'],
+        FAILED: [422, 'CV_VALIDATION_FAILED', 'The uploaded file is not a valid PDF'],
+      } as const;
+      const [status, code, message] = map[phase1.terminal];
+      throw this.apiError(status, code, message);
+    }
 
-      if (!this.validObject(inspection, attempt.declaredSizeBytes)) {
-        await tx.cvUploadAttempt.update({
+    const attempt = (phase1 as { attempt: any }).attempt;
+
+    // Phase 2: storage ops OUTSIDE any DB transaction.
+    let inspection: ObjectInspection;
+    try {
+      inspection = await this.storage.inspect(attempt.temporaryObjectPath);
+    } catch (error) {
+      if (error instanceof StorageObjectMissingError) {
+        await this.prisma.cvUploadAttempt.update({
           where: { id: attempt.id },
-          data: { status: 'FAILED', failureCode: 'VALIDATION', leaseToken: null, leaseUntil: null },
+          data: { status: 'PENDING', leaseToken: null, leaseUntil: null },
         });
-        throw this.apiError(422, 'CV_VALIDATION_FAILED', 'The uploaded file does not satisfy PDF constraints');
+        throw this.apiError(409, 'UPLOAD_NOT_READY', 'Upload the file before finalizing');
       }
+      throw error;
+    }
 
-      await this.storage.ensureCopied(attempt.temporaryObjectPath, attempt.finalObjectPath);
-      const finalInspection = await this.storage.inspect(attempt.finalObjectPath);
-      if (!this.validObject(finalInspection, attempt.declaredSizeBytes)) {
-        await tx.cvUploadAttempt.update({
-          where: { id: attempt.id },
-          data: { status: 'FAILED', failureCode: 'VALIDATION', leaseToken: null, leaseUntil: null },
-        });
-        throw this.apiError(422, 'CV_VALIDATION_FAILED', 'The stored file does not satisfy PDF constraints');
-      }
+    if (!this.validObject(inspection, attempt.declaredSizeBytes)) {
+      await this.prisma.cvUploadAttempt.update({
+        where: { id: attempt.id },
+        data: { status: 'FAILED', failureCode: 'VALIDATION', leaseToken: null, leaseUntil: null },
+      });
+      throw this.apiError(422, 'CV_VALIDATION_FAILED', 'The uploaded file does not satisfy PDF constraints');
+    }
 
-      // Re-check generation after verification (another finalize may have won).
-      const fresh = await tx.cvDocument.findUnique({ where: { id: doc.id } });
-      if (!fresh || attempt.generation <= fresh.activeGeneration) {
-        await tx.cvUploadAttempt.update({
-          where: { id: attempt.id },
-          data: { status: 'SUPERSEDED', leaseToken: null, leaseUntil: null },
-        });
-        throw this.apiError(409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active');
-      }
+    await this.storage.ensureCopied(attempt.temporaryObjectPath, attempt.finalObjectPath);
+    const finalInspection = await this.storage.inspect(attempt.finalObjectPath);
+    if (!this.validObject(finalInspection, attempt.declaredSizeBytes)) {
+      await this.prisma.cvUploadAttempt.update({
+        where: { id: attempt.id },
+        data: { status: 'FAILED', failureCode: 'VALIDATION', leaseToken: null, leaseUntil: null },
+      });
+      throw this.apiError(422, 'CV_VALIDATION_FAILED', 'The stored file does not satisfy PDF constraints');
+    }
 
-      const previousPath = fresh.activeObjectPath;
+    // Phase 3: activation (short tx, conditional on generation).
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "cv_documents" WHERE "id" = ${doc.id} FOR UPDATE`;
 
-      await tx.cvDocument.update({
-        where: { id: doc.id },
+      const freshAttempt = await tx.cvUploadAttempt.findFirst({
+        where: { id: attempt.id, leaseToken },
+      });
+      if (!freshAttempt) throw this.apiError(409, 'FINALIZATION_IN_PROGRESS', 'Lease lost');
+
+      const updated = await tx.cvDocument.updateMany({
+        where: { id: doc.id, activeGeneration: { lt: attempt.generation } },
         data: {
           activeGeneration: attempt.generation,
           activeObjectPath: attempt.finalObjectPath,
@@ -265,39 +277,29 @@ export class CvService {
           activatedAt: new Date(),
         },
       });
+      if (updated.count === 0) {
+        await tx.cvUploadAttempt.update({
+          where: { id: attempt.id },
+          data: { status: 'SUPERSEDED', leaseToken: null, leaseUntil: null },
+        });
+        throw this.apiError(409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active');
+      }
 
       await tx.cvUploadAttempt.update({
         where: { id: attempt.id },
         data: { status: 'FINALIZED', finalizedAt: new Date(), leaseToken: null, leaseUntil: null },
       });
 
-      if (previousPath && previousPath !== attempt.finalObjectPath) {
-        await this.scheduleCleanup(
-          tx,
-          previousPath,
-          'replaced',
-          new Date(Date.now() + CLEANUP_GRACE_MS),
-        );
-      }
-
-      return { already: false, isActive: true, attempt };
+      // P0 fix: cancel cleanup for the path that just became active.
+      await tx.storageCleanupTask.updateMany({
+        where: { objectPath: attempt.finalObjectPath, completedAt: null },
+        data: { completedAt: new Date(), lastErrorCode: 'BECAME_ACTIVE' },
+      });
     });
 
-    if (result.already) {
-      const current = await this.prisma.cvDocument.findUnique({ where: { userId } });
-      return {
-        attemptId: result.attempt.id,
-        status: 'FINALIZED',
-        isActive: result.isActive,
-        cv: this.publicCvFromDocument(current!),
-      };
-    }
-
-    const current = await this.prisma.cvDocument.findUnique({ where: { userId } });
+    const current = await this.prisma.cvDocument.findUnique({ where: { id: doc.id } });
     return {
-      attemptId: result.attempt.id,
-      status: 'FINALIZED',
-      isActive: true,
+      attemptId: attempt.id, status: 'FINALIZED', isActive: true,
       cv: this.publicCvFromDocument(current!),
     };
   }
