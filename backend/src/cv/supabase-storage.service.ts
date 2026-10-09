@@ -25,29 +25,31 @@ export interface ObjectInspection {
 
 @Injectable()
 export class SupabaseStorageService {
-  private readonly client: SupabaseClient;
+  private client: SupabaseClient | null = null;
 
-  constructor() {
-    const url = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !serviceRoleKey) {
-      throw new Error(
-        'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured',
-      );
+  private getClient(): SupabaseClient {
+    if (!this.client) {
+      const url = process.env.SUPABASE_URL;
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        throw new ServiceUnavailableException({
+          code: 'CV_STORAGE_UNAVAILABLE',
+          message: 'CV storage is not configured',
+        });
+      }
+      this.client = createClient(url, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
     }
-
-    this.client = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    return this.client;
   }
 
   async createUploadUrl(path: string) {
-    const { data, error } = await this.client.storage
+    const { data, error } = await this.getClient().storage
       .from(CV_BUCKET)
       .createSignedUploadUrl(path, { upsert: false });
 
@@ -72,7 +74,7 @@ export class SupabaseStorageService {
     path: string,
     fileName?: string,
   ): Promise<{ url: string; expiresAt: string }> {
-    const { data, error } = await this.client.storage
+    const { data, error } = await this.getClient().storage
       .from(CV_BUCKET)
       .createSignedUrl(
         path,
@@ -182,7 +184,7 @@ export class SupabaseStorageService {
     sourcePath: string,
     destinationPath: string,
   ): Promise<void> {
-    const { error } = await this.client.storage
+    const { error } = await this.getClient().storage
       .from(CV_BUCKET)
       .copy(sourcePath, destinationPath);
 
@@ -198,7 +200,7 @@ export class SupabaseStorageService {
   }
 
   async remove(path: string): Promise<void> {
-    const { error } = await this.client.storage
+    const { error } = await this.getClient().storage
       .from(CV_BUCKET)
       .remove([path]);
 

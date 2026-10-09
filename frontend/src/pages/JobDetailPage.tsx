@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { applyToJob } from '../api/applications';
+import { BookmarkButton } from '../components/BookmarkButton';
 import { getJob } from '../api/jobs';
 import { useAuth } from '../auth/auth-context';
 import { JobTypeBadge, StatusBadge } from '../components/badges';
@@ -185,7 +186,10 @@ function ApplyPanel({ job }: { job: JobDetail }) {
       ) : (
         <>
           <p className="text-sm text-slate-600">Send your application to {job.company.name}.</p>
-          <Button onClick={() => setShowForm(true)}>Apply for this job</Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setShowForm(true)}>Apply for this job</Button>
+            <BookmarkButton jobId={job.id} />
+          </div>
         </>
       )}
     </Card>

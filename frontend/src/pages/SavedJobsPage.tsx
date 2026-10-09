@@ -48,7 +48,7 @@ export function SavedJobsPage() {
           </div>
           <Pagination meta={query.data.meta} onPageChange={(next) => setParams({ page: String(next) })} />
         </>
-      ) : null : null}
+      ) : null}
     </div>
   );
 }
