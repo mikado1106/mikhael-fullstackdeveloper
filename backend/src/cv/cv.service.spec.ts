@@ -8,9 +8,14 @@ describe('CvService', () => {
     return {
       $queryRaw: jest.fn().mockResolvedValue([{ id: docId }]),
       cvDocument: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockImplementation(({ data }: any) => Promise.resolve({
-          id: docId, userId: data.userId, latestIssued: BigInt(0), activeGeneration: BigInt(0),
+        findUnique: jest.fn().mockResolvedValue({
+          id: docId, userId, latestIssued: BigInt(0), activeGeneration: BigInt(0),
+          activeObjectPath: null, activeFileName: null, activeSizeBytes: null,
+          activeMimeType: null, activatedAt: null,
+        }),
+        create: jest.fn(),
+        upsert: jest.fn().mockImplementation(({ create }: any) => Promise.resolve({
+          id: docId, userId: create.userId, latestIssued: BigInt(0), activeGeneration: BigInt(0),
           activeObjectPath: null, activeFileName: null, activeSizeBytes: null,
           activeMimeType: null, activatedAt: null,
         })),

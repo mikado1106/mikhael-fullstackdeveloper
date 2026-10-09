@@ -69,16 +69,19 @@ export class CvService {
     tx: Prisma.TransactionClient,
     userId: string,
   ) {
-    let doc = await tx.cvDocument.findUnique({ where: { userId } });
-    if (!doc) {
-      doc = await tx.cvDocument.create({ data: { userId } });
-    }
-    return doc;
+    return tx.cvDocument.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+    });
   }
 
   async issueUploadUrl(userId: string, dto: UploadUrlDto) {
     const attempt = await this.prisma.$transaction(async (tx) => {
       const doc = await this.getOrCreateDocument(tx, userId);
+      await tx.$queryRaw`SELECT "id" FROM "cv_documents" WHERE "id" = ${doc.id} FOR UPDATE`;
+      // Re-read after lock to get the latest latestIssued.
+      const locked = await tx.cvDocument.findUnique({ where: { id: doc.id } });
       const now = new Date();
 
       const recentCount = await tx.cvUploadAttempt.count({
@@ -102,7 +105,7 @@ export class CvService {
         throw this.apiError(429, 'UPLOAD_PENDING_LIMIT', 'Too many pending CV uploads');
       }
 
-      const generation = doc.latestIssued + BigInt(1);
+      const generation = (locked?.latestIssued ?? BigInt(0)) + BigInt(1);
       const id = randomUUID();
       const expiresAt = new Date(now.getTime() + ATTEMPT_TTL_MS);
       const uploadCapabilityUntil = new Date(now.getTime() + UPLOAD_URL_TTL_SECONDS * 1000);
@@ -261,6 +264,13 @@ export class CvService {
     const phase3 = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "cv_documents" WHERE "id" = ${doc.id} FOR UPDATE`;
 
+      // Capture previous active path BEFORE overwriting, for cleanup scheduling.
+      const before = await tx.cvDocument.findUnique({
+        where: { id: doc.id },
+        select: { activeObjectPath: true },
+      });
+      const previousPath = before?.activeObjectPath ?? null;
+
       const freshAttempt = await tx.cvUploadAttempt.findFirst({
         where: { id: attempt.id, leaseToken },
       });
@@ -291,6 +301,16 @@ export class CvService {
         where: { objectPath: attempt.finalObjectPath, completedAt: null },
         data: { completedAt: new Date(), lastErrorCode: 'BECAME_ACTIVE' },
       });
+
+      // Schedule cleanup for the replaced CV file (grace period for issued URLs).
+      if (previousPath && previousPath !== attempt.finalObjectPath) {
+        const notBefore = new Date(Date.now() + CLEANUP_GRACE_MS);
+        await tx.storageCleanupTask.upsert({
+          where: { objectPath: previousPath },
+          create: { objectPath: previousPath, reason: 'replaced', unneededAt: new Date(), notBefore, nextRunAt: notBefore },
+          update: { notBefore, nextRunAt: notBefore, completedAt: null },
+        });
+      }
 
       return { superseded: false as const };
     });

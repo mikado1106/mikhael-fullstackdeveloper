@@ -56,7 +56,7 @@ export class CleanupService {
             select: { id: true },
           });
           if (isActive) {
-            await this.markDone(task.id, 'STILL_ACTIVE');
+            await this.markDone(task.id, leaseToken, 'STILL_ACTIVE');
             continue;
           }
 
@@ -73,7 +73,7 @@ export class CleanupService {
             select: { id: true },
           });
           if (liveAttempt) {
-            await this.defer(task.id);
+            await this.defer(task.id, leaseToken);
             continue;
           }
 
@@ -84,16 +84,16 @@ export class CleanupService {
             select: { id: true },
           });
           if (recheck) {
-            await this.markDone(task.id, 'BECAME_ACTIVE_RACE');
+            await this.markDone(task.id, leaseToken, 'BECAME_ACTIVE_RACE');
             continue;
           }
 
           await this.storage.remove(task.objectPath);
-          await this.markDone(task.id, null);
+          await this.markDone(task.id, leaseToken, null);
         } catch {
           // Storage errors can contain URLs. Log only a constant message.
           this.logger.warn('CV cleanup task deferred');
-          await this.defer(task.id).catch(() => undefined);
+          await this.defer(task.id, leaseToken).catch(() => undefined);
         }
       }
     } finally {
@@ -101,9 +101,10 @@ export class CleanupService {
     }
   }
 
-  private async markDone(id: string, lastErrorCode: string | null) {
-    await this.prisma.storageCleanupTask.update({
-      where: { id },
+  private async markDone(id: string, leaseToken: string, lastErrorCode: string | null) {
+    // Only the lease holder may complete; a stale worker must not overwrite.
+    await this.prisma.storageCleanupTask.updateMany({
+      where: { id, leaseToken },
       data: {
         completedAt: new Date(),
         lastErrorCode,
@@ -113,9 +114,9 @@ export class CleanupService {
     });
   }
 
-  private async defer(id: string) {
-    await this.prisma.storageCleanupTask.update({
-      where: { id },
+  private async defer(id: string, leaseToken: string) {
+    await this.prisma.storageCleanupTask.updateMany({
+      where: { id, leaseToken },
       data: {
         attempts: { increment: 1 },
         nextRunAt: new Date(Date.now() + RETRY_DELAY_MS),
