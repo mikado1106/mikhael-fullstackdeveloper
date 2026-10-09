@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage';
 import { MyApplicationsPage } from './pages/MyApplicationsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SavedJobsPage } from './pages/SavedJobsPage';
+import { CvManager } from './components/CvManager';
 
 export default function App() {
   return (
@@ -29,11 +31,11 @@ export default function App() {
 
         <Route element={<RequireAuth />}>
           <Route path="/applications/:id" element={<ApplicationDetailPage />} />
-
           <Route element={<RequireAuth roles={['JOB_SEEKER']} />}>
             <Route path="/applications" element={<MyApplicationsPage />} />
+            <Route path="/saved" element={<SavedJobsPage />} />
+            <Route path="/cv" element={<CvManager />} />
           </Route>
-
           <Route element={<RequireAuth roles={['COMPANY']} />}>
             <Route path="/company/jobs" element={<CompanyJobsPage />} />
             <Route path="/company/jobs/new" element={<CreateJobPage />} />

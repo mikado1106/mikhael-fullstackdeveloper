@@ -1,6 +1,7 @@
 import { apiRequest } from '../lib/api';
 import type {
   ApplicationDetail,
+  ApplicationTimelineResponse,
   JobApplicantsResponse,
   MyApplication,
   Paginated,
@@ -8,10 +9,7 @@ import type {
 } from '../types/api';
 
 export function applyToJob(jobId: string, coverLetter?: string): Promise<ApplicationDetail> {
-  return apiRequest<ApplicationDetail>(`/jobs/${jobId}/applications`, {
-    method: 'POST',
-    body: coverLetter ? { coverLetter } : {},
-  });
+  return apiRequest<ApplicationDetail>(`/jobs/${jobId}/applications`, { method: 'POST', body: coverLetter ? { coverLetter } : {} });
 }
 
 export function listMyApplications(page = 1): Promise<Paginated<MyApplication>> {
@@ -20,6 +18,10 @@ export function listMyApplications(page = 1): Promise<Paginated<MyApplication>> 
 
 export function getApplication(id: string): Promise<ApplicationDetail> {
   return apiRequest<ApplicationDetail>(`/applications/${id}`);
+}
+
+export function getApplicationTimeline(id: string): Promise<ApplicationTimelineResponse> {
+  return apiRequest<ApplicationTimelineResponse>(`/applications/${id}/timeline`);
 }
 
 export function listJobApplicants(jobId: string, page = 1): Promise<JobApplicantsResponse> {

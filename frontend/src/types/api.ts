@@ -1,9 +1,7 @@
 /** Types mirroring the backend REST responses. Keep in sync with docs/API.md. */
 
 export type Role = 'JOB_SEEKER' | 'COMPANY';
-
 export type JobType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
-
 export type ApplicationStatus = 'APPLIED' | 'REVIEWING' | 'SHORTLISTED' | 'REJECTED' | 'ACCEPTED';
 
 export interface CompanySummary {
@@ -58,8 +56,8 @@ export interface JobListItem {
   id: string;
   title: string;
   location: string;
-  salaryMin: number;
-  salaryMax: number;
+  salaryMin: number | null;
+  salaryMax: number | null;
   jobType: JobType;
   isActive: boolean;
   createdAt: string;
@@ -80,8 +78,8 @@ export interface CompanyJob {
   title: string;
   description: string;
   location: string;
-  salaryMin: number;
-  salaryMax: number;
+  salaryMin: number | null;
+  salaryMax: number | null;
   jobType: JobType;
   isActive: boolean;
   createdAt: string;
@@ -102,7 +100,10 @@ export interface JobQuery {
   page?: number;
   limit?: number;
   search?: string;
+  location?: string;
   jobType?: JobType;
+  salaryMin?: number;
+  salaryMax?: number;
 }
 
 export interface JobSummary {
@@ -110,8 +111,8 @@ export interface JobSummary {
   title: string;
   location: string;
   jobType: JobType;
-  salaryMin: number;
-  salaryMax: number;
+  salaryMin: number | null;
+  salaryMax: number | null;
   companyId: string;
   company: { id: string; name: string };
 }
@@ -149,6 +150,18 @@ export interface StatusHistoryEntry {
   changedBy: { id: string; name: string; role: Role };
 }
 
+export interface TimelineEntry {
+  id: string;
+  status: ApplicationStatus;
+  occurredAt: string;
+}
+
+export interface ApplicationTimelineResponse {
+  applicationId: string;
+  currentStatus: ApplicationStatus;
+  history: TimelineEntry[];
+}
+
 export interface ApplicationDetail extends ApplicationBase {
   job: JobSummary;
   applicant: Applicant;
@@ -166,18 +179,72 @@ export interface UpdateStatusRequest {
   note?: string;
 }
 
+export interface SavedJob {
+  id: string;
+  savedAt: string;
+  availability: 'AVAILABLE' | 'UNAVAILABLE';
+  canApply: boolean;
+  job: JobListItem;
+}
+
+export interface SavedJobLookup {
+  jobId: string;
+  savedAt: string;
+}
+
+export interface SaveJobResponse {
+  jobId: string;
+  saved: true;
+  savedAt: string;
+}
+
+export interface CvMetadata {
+  id: string;
+  fileName: string;
+  sizeBytes: number;
+  mimeType: 'application/pdf';
+  updatedAt: string;
+}
+
+export interface CvResponse {
+  cv: CvMetadata | null;
+}
+
+export interface CvUploadUrlResponse {
+  attemptId: string;
+  attemptExpiresAt: string;
+  upload: {
+    url: string;
+    method: 'PUT';
+    headers: Record<string, string>;
+    bodyMode: 'binary';
+    expiresAt: string;
+  };
+  constraints: { minBytes: number; maxBytes: number; mimeType: 'application/pdf' };
+}
+
+export interface CvFinalizeResponse {
+  attemptId: string;
+  status: 'FINALIZED';
+  isActive: boolean;
+  cv: CvMetadata | null;
+}
+
+export interface CvDownloadUrlResponse {
+  url: string;
+  expiresAt: string;
+  fileName: string;
+}
+
 export interface ApiErrorBody {
   statusCode: number;
   message: string | string[];
   error?: string;
+  code?: string;
 }
 
 export interface CompanyAnalytics {
-  totals: {
-    jobs: number;
-    activeJobs: number;
-    applications: number;
-  };
+  totals: { jobs: number; activeJobs: number; applications: number };
   byStatus: Record<ApplicationStatus, number>;
   byJob: Array<{
     jobId: string;
@@ -186,8 +253,5 @@ export interface CompanyAnalytics {
     applications: number;
     byStatus: Partial<Record<ApplicationStatus, number>>;
   }>;
-  applicationsByDay: Array<{
-    date: string;
-    count: number;
-  }>;
+  applicationsByDay: Array<{ date: string; count: number }>;
 }

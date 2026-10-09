@@ -23,6 +23,12 @@ export class ApplicationsController {
     return this.applicationsService.findOne(id, user);
   }
 
+  @Get(':id/timeline')
+  @Roles(Role.JOB_SEEKER)
+  getTimeline(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.applicationsService.getTimeline(id, user);
+  }
+
   @Patch(':id/status')
   @Roles(Role.COMPANY)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

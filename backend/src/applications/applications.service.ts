@@ -13,6 +13,7 @@ import { CompaniesService } from '../companies/companies.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertStatusTransition } from './application-status.rules';
+import { ApplicationTimelineResponseDto } from './dto/application-timeline-response.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 
@@ -27,7 +28,11 @@ const jobSummarySelect = {
   company: { select: { id: true, name: true } },
 } satisfies Prisma.JobSelect;
 
-const applicantSelect = { id: true, name: true, email: true } satisfies Prisma.UserSelect;
+const applicantSelect = {
+  id: true,
+  name: true,
+  email: true,
+} satisfies Prisma.UserSelect;
 
 function isPrismaError(error: unknown, code: string): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
@@ -54,10 +59,7 @@ export class ApplicationsService {
 
   async apply(jobId: string, user: AuthenticatedUser, dto: CreateApplicationDto) {
     return this.prisma.$transaction(async (tx) => {
-      // Lock the job row before checking it: on READ COMMITTED a plain SELECT
-      // does not stop a concurrent deactivation from slipping between the check
-      // and the insert below. (No deactivate endpoint exists yet; the lock keeps
-      // the invariant safe for when one is added.)
+      // The row lock prevents deactivation between eligibility and insertion.
       const rows = await tx.$queryRaw<{ id: string; isActive: boolean }[]>`
         SELECT id, "isActive" FROM "jobs" WHERE id = ${jobId} FOR UPDATE`;
       const job = rows[0];
@@ -87,8 +89,6 @@ export class ApplicationsService {
           include: applicationDetailInclude,
         });
       } catch (error) {
-        // @@unique([jobId, applicantId]) guards double-apply; the row lock above
-        // guards the isActive invariant. Two different guarantees, both needed.
         if (isPrismaError(error, 'P2002')) {
           throw new ConflictException('You have already applied to this job');
         }
@@ -169,6 +169,58 @@ export class ApplicationsService {
     return application;
   }
 
+  async getTimeline(
+    id: string,
+    user: AuthenticatedUser,
+  ): Promise<ApplicationTimelineResponseDto> {
+    // RepeatableRead keeps the parent status and nested history in one snapshot.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const application = await tx.application.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            applicantId: true,
+            status: true,
+            job: { select: { companyId: true } },
+            history: {
+              select: {
+                id: true,
+                toStatus: true,
+                createdAt: true,
+              },
+              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            },
+          },
+        });
+
+        if (!application) {
+          throw new NotFoundException('Application not found');
+        }
+
+        if (user.role === Role.JOB_SEEKER) {
+          if (application.applicantId !== user.id) {
+            throw new ForbiddenException('You can only view your own applications');
+          }
+        } else {
+          await this.assertOwnsJob(application.job.companyId, user);
+        }
+
+        // Explicit allowlist: neither internal notes nor actor IDs reach the API.
+        return {
+          applicationId: application.id,
+          currentStatus: application.status,
+          history: application.history.map((entry) => ({
+            id: entry.id,
+            status: entry.toStatus,
+            occurredAt: entry.createdAt.toISOString(),
+          })),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
   async updateStatus(id: string, user: AuthenticatedUser, dto: UpdateApplicationStatusDto) {
     const application = await this.prisma.application.findUnique({
       where: { id },
@@ -186,8 +238,7 @@ export class ApplicationsService {
     }>;
 
     try {
-      // Compare-and-set on the status we read: a concurrent change makes Prisma
-      // throw P2025, which we turn into a 409 instead of silently overwriting.
+      // Compare-and-set prevents silently overwriting a concurrent status change.
       updated = await this.prisma.application.update({
         where: { id, status: application.status },
         data: {
@@ -212,11 +263,7 @@ export class ApplicationsService {
       throw error;
     }
 
-    // Best-effort notification: awaited (not fire-and-forget) so the delivery
-    // outcome is known even on serverless runtimes that may freeze after the
-    // response. Bounded by a 5s timeout; failures are logged and never fail
-    // the status update. A durable outbox/queue would be the next step if
-    // at-least-once delivery is required.
+    // Await best-effort notification with a bounded timeout.
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
@@ -235,7 +282,7 @@ export class ApplicationsService {
         }),
       ]);
     } catch {
-      // Deliberately constant message: provider error objects may carry PII.
+      // Provider errors may contain PII; only log a constant message.
       this.logger.error('Status change email failed or timed out');
     } finally {
       if (timeout) {

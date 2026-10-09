@@ -12,7 +12,7 @@ const companySummarySelect = {
   location: true,
 } satisfies Prisma.CompanySelect;
 
-// List view: no description.
+// List view: description is searchable but not included in the payload.
 const jobListSelect = {
   id: true,
   title: true,
@@ -25,6 +25,33 @@ const jobListSelect = {
   company: { select: companySummarySelect },
 } satisfies Prisma.JobSelect;
 
+function escapeLikeLiteral(value: string): string {
+  // Prisma's PostgreSQL contains filter wraps this in an ILIKE pattern.
+  // Escape its pattern metacharacters, including the escape character itself.
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function validateSalaryFilter(salaryMin?: number, salaryMax?: number): void {
+  for (const value of [salaryMin, salaryMax]) {
+    if (
+      value !== undefined &&
+      (!Number.isInteger(value) || value < 0 || value > 2147483647)
+    ) {
+      throw new BadRequestException(
+        'Salary filters must be integers between 0 and 2147483647',
+      );
+    }
+  }
+
+  if (
+    salaryMin !== undefined &&
+    salaryMax !== undefined &&
+    salaryMin > salaryMax
+  ) {
+    throw new BadRequestException('salaryMax must be greater than or equal to salaryMin');
+  }
+}
+
 @Injectable()
 export class JobsService {
   constructor(
@@ -33,21 +60,51 @@ export class JobsService {
   ) {}
 
   async findAll(query: QueryJobsDto) {
-    const { page, limit, search, jobType, location } = query;
+    const { page, limit, search, jobType, location, salaryMin, salaryMax } = query;
+    validateSalaryFilter(salaryMin, salaryMax);
+
     const insensitive = Prisma.QueryMode.insensitive;
+    const searchLiteral = search ? escapeLikeLiteral(search) : undefined;
+    const locationLiteral = location ? escapeLikeLiteral(location) : undefined;
+    const salaryConditions: Prisma.JobWhereInput[] = [];
+
+    if (salaryMin !== undefined || salaryMax !== undefined) {
+      // Two null bounds mean undisclosed salary, not an unrestricted interval.
+      salaryConditions.push({
+        OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+      });
+
+      // Inclusive intersection: job upper >= requested lower, and
+      // job lower <= requested upper. A single null job bound is open.
+      if (salaryMin !== undefined) {
+        salaryConditions.push({
+          OR: [{ salaryMax: null }, { salaryMax: { gte: salaryMin } }],
+        });
+      }
+
+      if (salaryMax !== undefined) {
+        salaryConditions.push({
+          OR: [{ salaryMin: null }, { salaryMin: { lte: salaryMax } }],
+        });
+      }
+    }
 
     const where: Prisma.JobWhereInput = {
       isActive: true,
       ...(jobType ? { jobType } : {}),
-      ...(location ? { location: { contains: location, mode: insensitive } } : {}),
-      ...(search
+      ...(locationLiteral
+        ? { location: { contains: locationLiteral, mode: insensitive } }
+        : {}),
+      ...(searchLiteral
         ? {
             OR: [
-              { title: { contains: search, mode: insensitive } },
-              { company: { name: { contains: search, mode: insensitive } } },
+              { title: { contains: searchLiteral, mode: insensitive } },
+              { description: { contains: searchLiteral, mode: insensitive } },
+              { company: { name: { contains: searchLiteral, mode: insensitive } } },
             ],
           }
         : {}),
+      ...(salaryConditions.length > 0 ? { AND: salaryConditions } : {}),
     };
 
     const [total, data] = await this.prisma.$transaction([
@@ -55,7 +112,7 @@ export class JobsService {
       this.prisma.job.findMany({
         where,
         select: jobListSelect,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -82,7 +139,6 @@ export class JobsService {
       throw new NotFoundException('Job not found');
     }
 
-    // Tell a job seeker whether they already applied so the UI can disable the button.
     // Anonymous visitors and company users always get null.
     const myApplication =
       user?.role === Role.JOB_SEEKER

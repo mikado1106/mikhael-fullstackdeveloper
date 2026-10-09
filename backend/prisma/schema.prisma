@@ -1,8 +1,7 @@
 // Run `npx prisma migrate dev` after changing this file.
 
 generator client {
-  provider = "prisma-client-js"
-  // The second target is the runtime Vercel serverless functions run on.
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -32,6 +31,15 @@ enum ApplicationStatus {
   ACCEPTED
 }
 
+enum CvUploadStatus {
+  PENDING
+  VERIFYING
+  FINALIZED
+  FAILED
+  EXPIRED
+  SUPERSEDED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -44,6 +52,8 @@ model User {
   company       Company?
   applications  Application[]
   statusChanges ApplicationStatusHistory[] @relation("StatusChangedBy")
+  savedJobs     SavedJob[]
+  cvDocument    CvDocument?
 
   @@map("users")
 }
@@ -63,15 +73,16 @@ model Company {
   @@map("companies")
 }
 
-/// Salary is stored in IDR per month.
+/// Salary is stored in IDR per month. Null bounds represent open intervals;
+/// two null bounds mean salary is undisclosed.
 model Job {
   id          String   @id @default(uuid())
   companyId   String
   title       String
   description String
   location    String
-  salaryMin   Int
-  salaryMax   Int
+  salaryMin   Int?
+  salaryMax   Int?
   jobType     JobType
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -79,9 +90,12 @@ model Job {
 
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications Application[]
+  savedJobs    SavedJob[]
 
   @@index([companyId])
+  // Retain the existing index until deployment query-plan audit permits removal.
   @@index([isActive, createdAt])
+  @@index([isActive, createdAt, id])
   @@map("jobs")
 }
 
@@ -118,6 +132,93 @@ model ApplicationStatusHistory {
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   changedBy   User        @relation("StatusChangedBy", fields: [changedById], references: [id])
 
-  @@index([applicationId, createdAt])
+  @@index([applicationId, createdAt, id])
   @@map("application_status_histories")
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, createdAt, id])
+  @@index([jobId])
+  @@map("saved_jobs")
+}
+
+model CvDocument {
+  id               String @id @default(uuid())
+  userId           String @unique
+  latestIssued     BigInt @default(0)
+  activeGeneration BigInt @default(0)
+
+  activeObjectPath String?   @unique
+  activeFileName   String?
+  activeSizeBytes  Int?
+  activeMimeType   String?
+  activatedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts CvUploadAttempt[]
+
+  @@map("cv_documents")
+}
+
+model CvUploadAttempt {
+  id         String         @id @default(uuid())
+  documentId String
+  generation BigInt
+  status     CvUploadStatus @default(PENDING)
+
+  temporaryObjectPath String @unique
+  finalObjectPath     String @unique
+  fileName            String
+  declaredSizeBytes   Int
+  declaredMimeType    String
+
+  expiresAt             DateTime
+  uploadCapabilityUntil DateTime
+  leaseToken            String?
+  leaseUntil            DateTime?
+  finalizedAt           DateTime?
+  failureCode           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  document CvDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, generation])
+  @@index([documentId, status, expiresAt])
+  @@index([status, expiresAt])
+  @@index([status, leaseUntil])
+  @@map("cv_upload_attempts")
+}
+
+model StorageCleanupTask {
+  id            String    @id @default(uuid())
+  objectPath    String    @unique
+  reason        String
+  unneededAt    DateTime
+  notBefore     DateTime
+  nextRunAt     DateTime
+  attempts      Int       @default(0)
+  leaseToken    String?
+  leaseUntil    DateTime?
+  completedAt   DateTime?
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([completedAt, nextRunAt])
+  @@map("storage_cleanup_tasks")
 }

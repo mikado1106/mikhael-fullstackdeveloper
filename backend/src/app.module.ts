@@ -9,9 +9,11 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { CompaniesModule } from './companies/companies.module';
 import { validateEnv } from './config/env.validation';
+import { CvModule } from './cv/cv.module';
 import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SavedJobsModule } from './saved-jobs/saved-jobs.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { PrismaModule } from './prisma/prisma.module';
     CompaniesModule,
     JobsModule,
     ApplicationsModule,
+    SavedJobsModule,
+    CvModule,
   ],
   controllers: [HealthController],
   providers: [
