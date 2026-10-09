@@ -36,7 +36,10 @@ export function formatIDR(amount: number): string {
   return idrFormatter.format(amount);
 }
 
-export function formatSalaryRange(min: number, max: number): string {
+export function formatSalaryRange(min: number | null, max: number | null): string {
+  if (min === null && max === null) return 'Gaji tidak dicantumkan';
+  if (min === null) return `Hingga ${formatIDR(max as number)}`;
+  if (max === null) return `Mulai ${formatIDR(min)}`;
   return min === max ? formatIDR(min) : `${formatIDR(min)} - ${formatIDR(max)}`;
 }
 

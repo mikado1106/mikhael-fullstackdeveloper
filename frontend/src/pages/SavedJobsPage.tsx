@@ -54,7 +54,7 @@ export function SavedJobsPage() {
               </Card>
             ))}
           </div>
-          <Pagination meta={query.data.meta} onPageChange={(next) => setParams({ page: String(next) })} />
+          <Pagination meta={query.data.meta} onPageChange={(next) => { if (next !== null) setParams({ page: String(next) }); }} />
         </>
       ) : null}
     </div>

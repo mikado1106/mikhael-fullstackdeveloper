@@ -12,7 +12,8 @@ export function BookmarkButton({ jobId, iconOnly = false }: { jobId: string; ico
     queryFn: async () => (await lookupSavedJobs([jobId])).data.length > 0,
     enabled: user?.role === 'JOB_SEEKER',
   });
-  const mutation = useMutation({
+  type Ctx = { previous: boolean | undefined; key: (string | undefined)[] };
+  const mutation = useMutation<unknown, Error, boolean, Ctx>({
     mutationFn: (saved: boolean) => saved ? saveJob(jobId) : unsaveJob(jobId),
     onMutate: async (saved) => {
       await client.cancelQueries({ queryKey: ['saved-job-ids', user?.id, jobId] });
