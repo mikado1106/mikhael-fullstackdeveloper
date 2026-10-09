@@ -9,7 +9,7 @@ import { errorMessage } from '../lib/api';
 const DEMO_PASSWORD = 'password123';
 const DEMO_ACCOUNTS = [
   { label: 'Company', email: 'company@lokerkita.id' },
-  { label: 'Job seeker', email: 'seeker@lokerkita.id' },
+  { label: 'Pencari kerja', email: 'seeker@lokerkita.id' },
 ];
 
 export function LoginPage() {

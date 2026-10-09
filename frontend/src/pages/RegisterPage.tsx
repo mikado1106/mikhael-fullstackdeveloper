@@ -55,7 +55,7 @@ export function RegisterPage() {
                   onChange={() => setRole(option)}
                   className="sr-only"
                 />
-                {option === 'COMPANY' ? 'Company' : 'Job seeker'}
+                {option === 'COMPANY' ? 'Perusahaan' : 'Pencari kerja'}
               </label>
             ))}
           </div>

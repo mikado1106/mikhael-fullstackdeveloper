@@ -56,5 +56,5 @@ export function homePathFor(role: Role): string {
 }
 
 export function roleLabel(role: Role): string {
-  return role === 'COMPANY' ? 'Company' : 'Job seeker';
+  return role === 'COMPANY' ? 'Perusahaan' : 'Pencari kerja';
 }

@@ -24,17 +24,17 @@ export function JobCard({ job, index }: { job: JobListItem; index?: number }) {
         </div>
           <dl className="grid gap-1 text-sm text-slate-600">
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Location</dt>
+              <dt className="text-slate-400">Lokasi</dt>
               <dd className="text-right">{job.location}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-slate-400">Salary</dt>
+              <dt className="text-slate-400">Gaji</dt>
               <dd className="text-right font-medium text-slate-800">{formatSalaryRange(job.salaryMin, job.salaryMax)}</dd>
             </div>
           </dl>
           <div className="mt-auto flex items-center justify-between pt-1">
             <JobTypeBadge jobType={job.jobType} />
-            <span className="text-xs text-slate-400">Posted {formatDate(job.createdAt)}</span>
+            <span className="text-xs text-slate-400">Diposting {formatDate(job.createdAt)}</span>
           </div>
         </Card>
       </Link>
