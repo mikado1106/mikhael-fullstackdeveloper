@@ -77,6 +77,17 @@ export class CleanupService {
             continue;
           }
 
+          // P0 fix: re-verify active status immediately before delete to
+          // minimize TOCTOU window. No other awaits between check and delete.
+          const recheck = await this.prisma.cvDocument.findFirst({
+            where: { activeObjectPath: task.objectPath },
+            select: { id: true },
+          });
+          if (recheck) {
+            await this.markDone(task.id, 'BECAME_ACTIVE_RACE');
+            continue;
+          }
+
           await this.storage.remove(task.objectPath);
           await this.markDone(task.id, null);
         } catch {

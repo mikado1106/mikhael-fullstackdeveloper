@@ -258,7 +258,7 @@ export class CvService {
     }
 
     // Phase 3: activation (short tx, conditional on generation).
-    await this.prisma.$transaction(async (tx) => {
+    const phase3 = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "cv_documents" WHERE "id" = ${doc.id} FOR UPDATE`;
 
       const freshAttempt = await tx.cvUploadAttempt.findFirst({
@@ -278,11 +278,7 @@ export class CvService {
         },
       });
       if (updated.count === 0) {
-        await tx.cvUploadAttempt.update({
-          where: { id: attempt.id },
-          data: { status: 'SUPERSEDED', leaseToken: null, leaseUntil: null },
-        });
-        throw this.apiError(409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active');
+        return { superseded: true as const };
       }
 
       await tx.cvUploadAttempt.update({
@@ -295,7 +291,17 @@ export class CvService {
         where: { objectPath: attempt.finalObjectPath, completedAt: null },
         data: { completedAt: new Date(), lastErrorCode: 'BECAME_ACTIVE' },
       });
+
+      return { superseded: false as const };
     });
+
+    if (phase3.superseded) {
+      await this.prisma.cvUploadAttempt.update({
+        where: { id: attempt.id },
+        data: { status: 'SUPERSEDED', leaseToken: null, leaseUntil: null },
+      });
+      throw this.apiError(409, 'UPLOAD_SUPERSEDED', 'A newer CV is already active');
+    }
 
     const current = await this.prisma.cvDocument.findUnique({ where: { id: doc.id } });
     return {

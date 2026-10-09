@@ -1,97 +1,22 @@
 import {
-  CanActivate,
+  Body,
   Controller,
-  ExecutionContext,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpException,
-  Injectable,
   Param,
   ParseUUIDPipe,
   Post,
-  Req,
-  Body,
-  UnauthorizedException,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Role } from '@prisma/client';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import type { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
 import { CvService } from './cv.service';
 import { FinalizeCvDto } from './dto/finalize-cv.dto';
 import { UploadUrlDto } from './dto/upload-url.dto';
-
-type AuthenticatedRequest = Request & {
-  user: {
-    id: string;
-    role: string;
-  };
-};
-
-/*
- * Authentication integration:
- * The application's existing global JWT/session guard must authenticate each
- * request and populate req.user = { id, role } before these guards execute.
- * These guards enforce authorization; they do not authenticate bearer tokens.
- */
-@Injectable()
-export class CvAuthenticatedGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context
-      .switchToHttp()
-      .getRequest<Partial<AuthenticatedRequest>>();
-
-    if (
-      !request.user ||
-      typeof request.user.id !== 'string' ||
-      typeof request.user.role !== 'string'
-    ) {
-      throw new UnauthorizedException({
-        code: 'UNAUTHENTICATED',
-        message: 'Authentication is required',
-      });
-    }
-
-    return true;
-  }
-}
-
-@Injectable()
-export class CvSeekerGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context
-      .switchToHttp()
-      .getRequest<AuthenticatedRequest>();
-
-    if (request.user.role !== 'SEEKER') {
-      throw new ForbiddenException({
-        code: 'FORBIDDEN',
-        message: 'A seeker account is required',
-      });
-    }
-
-    return true;
-  }
-}
-
-@Injectable()
-export class CvCompanyGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context
-      .switchToHttp()
-      .getRequest<AuthenticatedRequest>();
-
-    if (request.user.role !== 'COMPANY') {
-      throw new ForbiddenException({
-        code: 'FORBIDDEN',
-        message: 'A company account is required',
-      });
-    }
-
-    return true;
-  }
-}
 
 function cvValidationPipe(): ValidationPipe {
   return new ValidationPipe({
@@ -111,7 +36,7 @@ function cvValidationPipe(): ValidationPipe {
 }
 
 @Controller('me/cv')
-@UseGuards(CvAuthenticatedGuard, CvSeekerGuard)
+@Roles(Role.JOB_SEEKER)
 @UsePipes(cvValidationPipe())
 export class CvController {
   constructor(private readonly cv: CvService) {}
@@ -119,42 +44,42 @@ export class CvController {
   @Post('upload-url')
   @HttpCode(201)
   issueUploadUrl(
-    @Req() request: AuthenticatedRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UploadUrlDto,
   ) {
-    return this.cv.issueUploadUrl(request.user.id, dto);
+    return this.cv.issueUploadUrl(user.id, dto);
   }
 
   @Post('finalize')
   @HttpCode(200)
   finalize(
-    @Req() request: AuthenticatedRequest,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: FinalizeCvDto,
   ) {
-    return this.cv.finalize(request.user.id, dto.attemptId);
+    return this.cv.finalize(user.id, dto.attemptId);
   }
 
   @Get()
-  getCv(@Req() request: AuthenticatedRequest) {
-    return this.cv.getCv(request.user.id);
+  getCv(@CurrentUser() user: AuthenticatedUser) {
+    return this.cv.getCv(user.id);
   }
 
   @Get('download-url')
-  getDownloadUrl(@Req() request: AuthenticatedRequest) {
-    return this.cv.getDownloadUrl(request.user.id);
+  getDownloadUrl(@CurrentUser() user: AuthenticatedUser) {
+    return this.cv.getDownloadUrl(user.id);
   }
 }
 
 @Controller('applications')
-@UseGuards(CvAuthenticatedGuard, CvCompanyGuard)
+@Roles(Role.COMPANY)
 export class ApplicationCvController {
   constructor(private readonly cv: CvService) {}
 
   @Get(':id/cv-url')
   getApplicationCvUrl(
-    @Req() request: AuthenticatedRequest,
-    @Param('id', new ParseUUIDPipe()) applicationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) applicationId: string,
   ) {
-    return this.cv.getApplicationCvUrl(request.user.id, applicationId);
+    return this.cv.getApplicationCvUrl(user.id, applicationId);
   }
 }
