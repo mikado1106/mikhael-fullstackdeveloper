@@ -47,7 +47,7 @@ export function CreateJobPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Post a job" description="Fill in the vacancy details. It becomes visible to job seekers immediately." />
+      <PageHeader title="Pasang lowongan" description="Isi detail lowongan. Langsung terlihat oleh pencari kerja." />
 
       <Card>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">

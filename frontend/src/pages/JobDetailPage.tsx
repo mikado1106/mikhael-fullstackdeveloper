@@ -59,13 +59,13 @@ export function JobDetailPage() {
           </Card>
 
           <Card>
-            <h2 className="text-base font-semibold text-slate-900">About the role</h2>
+            <h2 className="text-base font-semibold text-slate-900">Tentang peran ini</h2>
             <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">{job.description}</p>
           </Card>
 
           {job.company.description ? (
             <Card>
-              <h2 className="text-base font-semibold text-slate-900">About {job.company.name}</h2>
+              <h2 className="text-base font-semibold text-slate-900">Tentang {job.company.name}</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-700">{job.company.description}</p>
             </Card>
           ) : null}
@@ -134,13 +134,13 @@ function ApplyPanel({ job }: { job: JobDetail }) {
   if (job.myApplication) {
     return (
       <Card className="flex flex-col gap-3 animate-fade-in">
-        <p className="text-sm font-semibold text-slate-900">You applied on {formatDate(job.myApplication.createdAt)}</p>
+        <p className="text-sm font-semibold text-slate-900">Anda melamar pada {formatDate(job.myApplication.createdAt)}</p>
         <div className="flex items-center gap-2 text-sm text-slate-600">
-          <span>Current status:</span>
+          <span>Status saat ini:</span>
           <StatusBadge status={job.myApplication.status} />
         </div>
         <Link to={`/applications/${job.myApplication.id}`} className="text-sm font-medium text-brand-600 hover:underline">
-          View application history
+          Lihat riwayat lamaran
         </Link>
       </Card>
     );

@@ -242,10 +242,10 @@ export function CompanyAnalyticsPage() {
         <EmptyState
           action={
             <Link to="/company/jobs/new">
-              <Button>Post a job</Button>
+              <Button>Pasang lowongan</Button>
             </Link>
           }
-          description="Post a job to start tracking applications."
+          description="Pasang lowongan untuk mulai memantau lamaran."
           title="No job data yet"
         />
       </main>

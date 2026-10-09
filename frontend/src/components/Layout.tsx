@@ -8,7 +8,7 @@ const guestLinks = [{ to: '/jobs', label: 'Lowongan' }];
 
 const companyLinks = [
   { to: '/company/jobs', label: 'Lowongan saya' },
-  { to: '/company/analytics', label: 'Analytics' },
+  { to: '/company/analytics', label: 'Analitik' },
   { to: '/company/jobs/new', label: 'Pasang lowongan' },
   { to: '/jobs', label: 'Jelajahi lowongan' },
 ];
@@ -42,7 +42,7 @@ export function Layout() {
             <BrandMark />
           </Link>
           <nav
-            aria-label="Main"
+            aria-label="Navigasi utama"
             className="order-last flex basis-full gap-1 overflow-x-auto sm:order-none sm:basis-auto"
           >
             {links.map((link) => (
@@ -69,16 +69,16 @@ export function Layout() {
                 </p>
               </div>
               <Button variant="secondary" onClick={handleLogout}>
-                Log out
+                Keluar
               </Button>
             </div>
           ) : (
             <div className="ml-auto flex items-center gap-2">
               <Link to="/login">
-                <Button variant="secondary">Log in</Button>
+                <Button variant="secondary">Masuk</Button>
               </Link>
               <Link to="/register">
-                <Button>Create account</Button>
+                <Button>Buat akun</Button>
               </Link>
             </div>
           )}

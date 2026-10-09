@@ -67,7 +67,7 @@ function ClipboardIcon() {
 
 const STEPS = [
   {
-    title: 'Browse jobs',
+    title: 'Jelajahi lowongan',
     description: 'Filter by title, company or job type. No account needed.',
     icon: <SearchIcon />,
   },
@@ -188,7 +188,7 @@ export function HomePage() {
       <section className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6">
         <div>
           <p className="text-base font-semibold text-slate-900">Hiring?</p>
-          <p className="text-sm text-slate-600">Post a vacancy and review candidates in one place.</p>
+          <p className="text-sm text-slate-600">Pasang lowongan dan tinjau kandidat di satu tempat.</p>
         </div>
         <Link to="/register">
           <Button variant="secondary">Create a company account</Button>

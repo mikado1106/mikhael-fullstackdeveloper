@@ -33,13 +33,13 @@ export function CompanyJobsPage() {
 
   const postButton = (
     <Link to="/company/jobs/new">
-      <Button>Post a job</Button>
+      <Button>Pasang lowongan</Button>
     </Link>
   );
 
   return (
     <div>
-      <PageHeader title="My jobs" description="Vacancies posted by your company and their applicants." action={postButton} />
+      <PageHeader title="Lowongan saya" description="Lowongan yang dipasang perusahaan Anda dan pelamarnya." action={postButton} />
 
       {flash ? (
         <div className="mb-6">
