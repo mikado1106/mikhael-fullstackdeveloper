@@ -17,19 +17,19 @@ export function MyApplicationsPage() {
 
   return (
     <div>
-      <PageHeader title="My applications" description="Every job you applied to, with its current status." />
+      <PageHeader title="Lamaran saya" description="Semua lowongan yang Anda lamar, beserta statusnya." />
 
-      {applicationsQuery.isPending ? <Spinner label="Loading applications..." /> : null}
+      {applicationsQuery.isPending ? <Spinner label="Memuat lamaran..." /> : null}
       {applicationsQuery.isError ? <Alert>{errorMessage(applicationsQuery.error)}</Alert> : null}
 
       {applicationsQuery.data ? (
         applicationsQuery.data.meta.total === 0 ? (
           <EmptyState
-            title="No applications yet"
-            description="Browse the openings and send your first application."
+            title="Belum ada lamaran"
+            description="Jelajahi lowongan dan kirim lamaran pertama Anda."
             action={
               <Link to="/jobs">
-                <Button>Browse jobs</Button>
+                <Button>Jelajahi lowongan</Button>
               </Link>
             }
           />
@@ -46,7 +46,7 @@ export function MyApplicationsPage() {
                     {application.job.company.name} &middot; {application.job.location}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {formatSalaryRange(application.job.salaryMin, application.job.salaryMax)} &middot; Applied{' '}
+                    {formatSalaryRange(application.job.salaryMin, application.job.salaryMax)} &middot; Melamar pada{' '}
                     {formatDate(application.createdAt)}
                   </p>
                 </div>
@@ -54,7 +54,7 @@ export function MyApplicationsPage() {
                   <JobTypeBadge jobType={application.job.jobType} />
                   <StatusBadge status={application.status} />
                   <Link to={`/applications/${application.id}`} className="text-sm font-medium text-brand-600 hover:underline">
-                    View history
+                    Lihat riwayat
                   </Link>
                 </div>
               </Card>

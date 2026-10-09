@@ -62,7 +62,15 @@ export function ApplicationDetailPage() {
 }
 
 function SeekerInfoPanel({ application }: { application: ApplicationDetail }) {
-  return <Card className="flex flex-col gap-2"><p className="text-sm font-semibold text-slate-900">Langkah berikutnya</p><p className="text-sm text-slate-600">{isFinalStatus(application.status) ? `Lamaran ini berstatus ${STATUS_LABELS[application.status].toLowerCase()}.` : 'Perusahaan akan meninjau lamaran Anda. Perubahan status tampil di riwayat.'}</p></Card>;
+  const guidance = application.status === 'REJECTED'
+    ? 'Lamaran ini berstatus ditolak. Jangan berkecil hati — Anda bisa melamar lowongan lain yang sesuai.'
+    : application.status === 'ACCEPTED'
+      ? 'Selamat! Perusahaan akan menghubungi Anda untuk langkah selanjutnya.'
+      : isFinalStatus(application.status)
+        ? `Lamaran ini berstatus ${STATUS_LABELS[application.status].toLowerCase()}.`
+        : 'Perusahaan akan meninjau lamaran Anda. Perubahan status tampil di riwayat.';
+
+  return <Card className="flex flex-col gap-2"><p className="text-sm font-semibold text-slate-900">Langkah berikutnya</p><p className="text-sm text-slate-600">{guidance}</p></Card>;
 }
 
 const NEXT_STATUS: Partial<Record<ApplicationStatus, ApplicationStatus>> = { APPLIED: 'REVIEWING', REVIEWING: 'SHORTLISTED', SHORTLISTED: 'ACCEPTED' };

@@ -151,7 +151,7 @@ export function JobListPage() {
           max="2147483647"
           step="1"
           aria-label="Gaji minimum bulanan dalam IDR"
-          placeholder="Gaji minimum (IDR/bulan)"
+          placeholder="cth: 8000000"
           value={salaryMinInput}
           onChange={(event) => setSalaryMinInput(event.target.value)}
         />
@@ -161,7 +161,7 @@ export function JobListPage() {
           max="2147483647"
           step="1"
           aria-label="Gaji maksimum bulanan dalam IDR"
-          placeholder="Gaji maksimum (IDR/bulan)"
+          placeholder="cth: 8000000"
           value={salaryMaxInput}
           onChange={(event) => setSalaryMaxInput(event.target.value)}
         />

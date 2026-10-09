@@ -64,7 +64,7 @@ export function CvManager() {
 
   return (
     <Card className="flex min-w-0 flex-col gap-4">
-      <div><h2 className="text-base font-semibold text-slate-900">CV saya</h2><p className="mt-1 text-sm text-slate-600">CV baru akan digunakan juga untuk lamaran yang sudah dikirim.</p></div>
+      <div><h2 className="text-base font-semibold text-slate-900">CV saya</h2><p className="mt-1 text-sm text-slate-600">Perusahaan selalu melihat CV terbaru Anda, termasuk untuk lamaran yang sudah dikirim.</p></div>
       {cvQuery.isPending ? <Spinner label="Memuat metadata CV..." /> : null}
       {cvQuery.isError ? <Alert>{errorMessage(cvQuery.error)}</Alert> : null}
       {cvQuery.data?.cv ? (

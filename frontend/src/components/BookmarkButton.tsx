@@ -47,12 +47,14 @@ export function BookmarkButton({ jobId, iconOnly = false }: { jobId: string; ico
   }
 
   const saved = savedQuery.data ?? false;
+  const saveLabel = saved ? 'Hapus lowongan dari simpanan' : 'Simpan lowongan';
   return (
     <Button
       type="button"
       variant="secondary"
       aria-pressed={saved}
-      aria-label={saved ? 'Hapus lowongan dari simpanan' : 'Simpan lowongan'}
+      aria-label={saveLabel}
+      title={iconOnly ? saveLabel : undefined}
       disabled={mutation.isPending || savedQuery.isPending}
       onClick={() => mutation.mutate(!saved)}
       className={iconOnly ? 'px-2' : undefined}

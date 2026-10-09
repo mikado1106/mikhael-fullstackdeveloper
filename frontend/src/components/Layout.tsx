@@ -4,20 +4,20 @@ import { roleLabel } from '../lib/format';
 import { BrandMark } from './BrandMark';
 import { Button } from './ui';
 
-const guestLinks = [{ to: '/jobs', label: 'Jobs' }];
+const guestLinks = [{ to: '/jobs', label: 'Lowongan' }];
 
 const companyLinks = [
-  { to: '/company/jobs', label: 'My jobs' },
+  { to: '/company/jobs', label: 'Lowongan saya' },
   { to: '/company/analytics', label: 'Analytics' },
-  { to: '/company/jobs/new', label: 'Post a job' },
-  { to: '/jobs', label: 'Browse jobs' },
+  { to: '/company/jobs/new', label: 'Pasang lowongan' },
+  { to: '/jobs', label: 'Jelajahi lowongan' },
 ];
 
 const seekerLinks = [
-  { to: '/jobs', label: 'Jobs' },
-  { to: '/saved', label: 'Saved' },
-  { to: '/applications', label: 'My applications' },
-  { to: '/cv', label: 'My CV' },
+  { to: '/jobs', label: 'Lowongan' },
+  { to: '/saved', label: 'Tersimpan' },
+  { to: '/applications', label: 'Lamaran saya' },
+  { to: '/cv', label: 'CV saya' },
 ];
 
 export function Layout() {
